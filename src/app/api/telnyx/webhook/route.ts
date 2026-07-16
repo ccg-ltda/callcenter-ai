@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { TranscriptTurn } from '@/lib/mockData';
 import { summarizeCall } from '@/lib/server/aiSummaryService';
-import { createCalendarEvent } from '@/lib/server/calendarService';
+import { createCalendarEvent, isGoogleAppsScriptConfigured } from '@/lib/server/calendarService';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -72,12 +72,12 @@ async function handleConversationEnded(telnyxCallId: string, payload: any) {
 
   const meetingId = `mtg_${crypto.randomUUID()}`;
   let googleEventId: string | null = null;
-  if (settings?.google_calendar_connected) {
+  if (settings?.google_calendar_connected || isGoogleAppsScriptConfigured()) {
     try {
       const event = await createCalendarEvent({
         title: `Reunión con ${call.contact?.full_name || 'contacto'}`,
         description: `Reunión agendada automáticamente por CallCenter IA.\n\n${summary.summary}`,
-        scheduledAt: summary.proposedDateTime, durationMin: 15, timezone: settings.timezone || 'America/Bogota',
+        scheduledAt: summary.proposedDateTime, durationMin: 15, timezone: settings?.timezone || 'America/Bogota',
       });
       googleEventId = event.id;
     } catch (error) {

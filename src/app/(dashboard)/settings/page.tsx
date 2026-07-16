@@ -7,11 +7,8 @@ import {
   Bot, 
   Calendar, 
   Clock, 
-  Globe, 
   Save, 
-  Check, 
   Loader2, 
-  HelpCircle,
   AlertCircle
 } from 'lucide-react';
 import { 
@@ -20,7 +17,6 @@ import {
   CardTitle, 
   CardDescription, 
   CardContent, 
-  CardFooter, 
   Button, 
   Input, 
   Label, 
@@ -39,6 +35,8 @@ export default function SettingsPage() {
   const [telnyxPhoneNumber, setTelnyxPhoneNumber] = useState('');
   const [telnyxAssistantId, setTelnyxAssistantId] = useState('');
   const [googleConnected, setGoogleConnected] = useState(false);
+  const [googleProvider, setGoogleProvider] = useState<string | null>(null);
+  const [testingGoogle, setTestingGoogle] = useState(false);
   const [callWindowStart, setCallWindowStart] = useState('10:00');
   const [callWindowEnd, setCallWindowEnd] = useState('18:00');
   const [timezone, setTimezone] = useState('America/Argentina/Buenos_Aires');
@@ -68,6 +66,7 @@ export default function SettingsPage() {
           setTelnyxPhoneNumber(data.telnyxPhoneNumber || '');
           setTelnyxAssistantId(data.telnyxAssistantId || '');
           setGoogleConnected(!!data.googleCalendarConnected);
+          setGoogleProvider(data.googleCalendarProvider || null);
           setCallWindowStart(data.callWindowStart || '10:00');
           setCallWindowEnd(data.callWindowEnd || '18:00');
           setTimezone(data.timezone || 'America/Argentina/Buenos_Aires');
@@ -79,11 +78,6 @@ export default function SettingsPage() {
       }
     }
     loadSettings();
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('google') === 'connected') {
-      setGoogleConnected(true);
-      window.history.replaceState({}, '', '/settings');
-    }
   }, []);
 
   // Save settings
@@ -106,19 +100,24 @@ export default function SettingsPage() {
 
       if (!res.ok) throw new Error('Error al guardar la configuración');
       alert('Configuración guardada exitosamente');
-    } catch (err: any) {
-      alert(err.message || 'Error al guardar');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al guardar');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleGoogleConnect = async () => {
-    if (googleConnected) {
-      const response = await fetch('/api/google/disconnect', { method: 'POST' });
-      if (response.ok) setGoogleConnected(false);
-    } else {
-      window.location.href = '/api/google/auth';
+  const handleGoogleTest = async () => {
+    setTestingGoogle(true);
+    try {
+      const response = await fetch('/api/google/test', { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo conectar con Google Calendar.');
+      alert('Google Apps Script respondió correctamente.');
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'No se pudo probar Google Calendar.');
+    } finally {
+      setTestingGoogle(false);
     }
   };
 
@@ -301,18 +300,21 @@ export default function SettingsPage() {
                 <div>
                   <span className="font-semibold text-sm block">Google Calendar</span>
                   <span className="text-xs text-zinc-400">
-                    {googleConnected 
-                      ? 'Integración activa: Las reuniones se crearán automáticamente.' 
-                      : 'Sin conectar. Conéctate para agendar reuniones.'}
+                    {googleConnected
+                      ? googleProvider === 'apps-script'
+                        ? 'Google Apps Script activo: las reuniones se crearán automáticamente.'
+                        : 'Integración activa: las reuniones se crearán automáticamente.'
+                      : 'Pendiente: configura la URL y el secreto de Google Apps Script en Vercel.'}
                   </span>
                 </div>
               </div>
               <Button
                 type="button"
                 variant={googleConnected ? 'outline' : 'primary'}
-                onClick={handleGoogleConnect}
+                onClick={handleGoogleTest}
+                disabled={!googleConnected || testingGoogle}
               >
-                {googleConnected ? 'Desconectar cuenta' : 'Conectar Google Account'}
+                {testingGoogle ? 'Probando...' : googleConnected ? 'Probar conexión' : 'Pendiente de configurar'}
               </Button>
             </div>
           </CardContent>

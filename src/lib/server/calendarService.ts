@@ -4,6 +4,53 @@ import { getSupabaseAdmin, useMockServices } from './supabaseAdmin';
 
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 
+export type CalendarEventInput = {
+  title: string;
+  description: string;
+  scheduledAt: string;
+  durationMin: number;
+  timezone: string;
+};
+
+type AppsScriptResponse = {
+  ok?: boolean;
+  id?: string;
+  htmlLink?: string | null;
+  error?: string;
+};
+
+function appsScriptConfig() {
+  const url = process.env.GOOGLE_APPS_SCRIPT_URL;
+  const secret = process.env.GOOGLE_APPS_SCRIPT_SECRET;
+  return url && secret ? { url, secret } : null;
+}
+
+export function isGoogleAppsScriptConfigured() {
+  return Boolean(appsScriptConfig());
+}
+
+async function callGoogleAppsScript(payload: Record<string, unknown>) {
+  const config = appsScriptConfig();
+  if (!config) throw new Error('Google Apps Script no está configurado.');
+
+  const response = await fetch(config.url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...payload, secret: config.secret }),
+    redirect: 'follow',
+    cache: 'no-store',
+  });
+  if (!response.ok) throw new Error(`Google Apps Script respondió con estado ${response.status}.`);
+
+  const result = (await response.json()) as AppsScriptResponse;
+  if (!result.ok) throw new Error(result.error || 'Google Apps Script rechazó la solicitud.');
+  return result;
+}
+
+export async function testGoogleAppsScriptConnection() {
+  await callGoogleAppsScript({ action: 'health' });
+}
+
 function googleConfig() {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
@@ -41,8 +88,14 @@ async function getGoogleAccessToken(refreshToken: string) {
   return (await response.json()).access_token as string;
 }
 
-export async function createCalendarEvent(input: { title: string; description: string; scheduledAt: string; durationMin: number; timezone: string }) {
+export async function createCalendarEvent(input: CalendarEventInput) {
   if (useMockServices) return { id: `google_mock_${Date.now()}`, htmlLink: null };
+  if (isGoogleAppsScriptConfigured()) {
+    const event = await callGoogleAppsScript({ action: 'createEvent', ...input });
+    if (!event.id) throw new Error('Google Apps Script no devolvió el ID del evento.');
+    return { id: event.id, htmlLink: event.htmlLink || null };
+  }
+
   const supabase = getSupabaseAdmin();
   const { data: settings, error } = await supabase!.from('settings').select('google_refresh_token').eq('id', 'default').single();
   if (error || !settings?.google_refresh_token) throw new Error('Google Calendar no está conectado.');

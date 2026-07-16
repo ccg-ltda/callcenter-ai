@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { camelizeRow } from '@/lib/server/supabaseRows';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { isGoogleAppsScriptConfigured } from '@/lib/server/calendarService';
 
 const defaults = {
   id: 'default', telnyx_phone_number: '', telnyx_assistant_id: '', google_calendar_connected: false,
@@ -10,11 +11,18 @@ const defaults = {
 function safeSettings(row: Record<string, unknown>) {
   const { google_refresh_token, telnyx_api_key, ...safe } = row;
   void google_refresh_token;
-  return { ...camelizeRow(safe), telnyxApiKeyConfigured: Boolean(telnyx_api_key || process.env.TELNYX_API_KEY) };
+  const appsScriptConfigured = isGoogleAppsScriptConfigured();
+  const oauthConnected = Boolean(safe.google_calendar_connected);
+  return {
+    ...camelizeRow(safe),
+    googleCalendarConnected: appsScriptConfigured || oauthConnected,
+    googleCalendarProvider: appsScriptConfigured ? 'apps-script' : oauthConnected ? 'oauth' : null,
+    telnyxApiKeyConfigured: Boolean(telnyx_api_key || process.env.TELNYX_API_KEY),
+  };
 }
 
 export async function GET() {
-  if (useMockServices) return NextResponse.json({ ...camelizeRow(defaults), telnyxApiKeyConfigured: true });
+  if (useMockServices) return NextResponse.json({ ...camelizeRow(defaults), googleCalendarProvider: 'mock', telnyxApiKeyConfigured: true });
   const supabase = getSupabaseAdmin()!;
   let { data, error } = await supabase.from('settings').select('*').eq('id', 'default').maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
