@@ -82,7 +82,8 @@ export default function NumbersPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: number }),
       });
-      if (!resBuy.ok) throw new Error('Error al realizar la compra');
+      const buyData = await resBuy.json().catch(() => null);
+      if (!resBuy.ok) throw new Error(buyData?.error || 'Error al realizar la compra');
       
       // 2. Update settings in DB
       const resSettings = await fetch('/api/settings');
@@ -97,7 +98,8 @@ export default function NumbersPage() {
         })
       });
       
-      if (!resUpdate.ok) throw new Error('Error al asociar el número a la cuenta');
+      const updateData = await resUpdate.json().catch(() => null);
+      if (!resUpdate.ok) throw new Error(updateData?.error || 'Error al asociar el número a la cuenta');
 
       alert(`Número ${number} adquirido y configurado como número saliente.`);
       setCurrentNumber(number);

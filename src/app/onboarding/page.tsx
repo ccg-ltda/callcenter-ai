@@ -94,7 +94,8 @@ export default function OnboardingPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: selectedNumber }),
       });
-      if (!res.ok) throw new Error('Error al comprar el número');
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Error al comprar el número');
       alert(`Número ${selectedNumber} comprado y configurado exitosamente.`);
       setCurrentStep(3);
     } catch (error) {
