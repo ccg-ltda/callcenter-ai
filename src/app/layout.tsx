@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CallCenter IA",
+  title: "Contact Center IA",
   description: "Lanza campañas de llamadas con agentes de voz de Inteligencia Artificial",
 };
 

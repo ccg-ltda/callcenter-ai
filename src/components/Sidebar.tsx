@@ -68,7 +68,7 @@ export default function Sidebar() {
               CC
             </div>
             <div>
-              <span className="font-semibold text-base tracking-wide block text-white">CallCenter IA</span>
+              <span className="font-semibold text-base tracking-wide block text-white">Contact Center IA</span>
               <span className="text-[10px] text-[#3b82f6] font-mono uppercase tracking-wider">Dashboard</span>
             </div>
           </div>

@@ -39,7 +39,7 @@ export const mockTranscripts = [
     aiSummary: 'Juan mostró interés en automatizar la prospección comercial. Acordó una demostración para revisar el flujo de campañas y los costos.',
     interested: true, sentiment: 'positive', nextSteps: 'Realizar demo y enviar propuesta comercial.',
     fullTranscript: [
-      { role: 'agent', text: 'Hola Juan, soy el asistente virtual de CallCenter IA. Esta llamada puede ser grabada. ¿Tienes un minuto?', timestamp: new Date(now - 3_600_000).toISOString() },
+      { role: 'agent', text: 'Hola Juan, soy el asistente virtual de Contact Center IA. Esta llamada puede ser grabada. ¿Tienes un minuto?', timestamp: new Date(now - 3_600_000).toISOString() },
       { role: 'user', text: 'Sí, claro. Cuéntame.', timestamp: new Date(now - 3_590_000).toISOString() },
       { role: 'agent', text: 'Ayudamos a equipos comerciales a agendar reuniones con llamadas de IA. ¿Te interesaría ver una demo?', timestamp: new Date(now - 3_580_000).toISOString() },
       { role: 'user', text: 'Sí, el viernes a las diez me funciona.', timestamp: new Date(now - 3_565_000).toISOString() },

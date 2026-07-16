@@ -1,4 +1,4 @@
-# Call Center IA
+# Contact Center IA
 
 Aplicacion de call center con Next.js, Supabase, Telnyx, Google Calendar mediante Apps Script y resumenes con OpenAI.
 

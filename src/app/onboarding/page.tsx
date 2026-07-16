@@ -49,7 +49,7 @@ export default function OnboardingPage() {
   const [agentName, setAgentName] = useState('Asistente Agendador');
   const [agentVoice, setAgentVoice] = useState('telnyx_voice_en_female_1');
   const [agentScript, setAgentScript] = useState(
-    'Hola, soy el agente de IA de CallCenter. Te llamo para saber si te gustaría agendar una reunión comercial esta semana. ¿Tienes 15 minutos disponibles el jueves por la mañana?'
+    'Hola, soy el agente de IA de Contact Center IA. Te llamo para saber si te gustaría agendar una reunión comercial esta semana. ¿Tienes 15 minutos disponibles el jueves por la mañana?'
   );
   const [agentGoal, setAgentGoal] = useState('agendar_reunion');
   const [meetingDuration, setMeetingDuration] = useState(15);
@@ -181,7 +181,7 @@ export default function OnboardingPage() {
           <div className="h-12 w-12 rounded-xl bg-[#3b82f6] flex items-center justify-center text-[#0b0f14] font-extrabold text-2xl mx-auto shadow-lg shadow-[#3b82f6]/20">
             CC
           </div>
-          <h1 className="text-3xl font-extrabold mt-4 text-white tracking-tight">Bienvenido a CallCenter IA</h1>
+          <h1 className="text-3xl font-extrabold mt-4 text-white tracking-tight">Bienvenido a Contact Center IA</h1>
           <p className="text-zinc-400 mt-2 text-sm max-w-md mx-auto">
             Configura tus servicios en unos simples pasos y empieza a automatizar tus campañas de llamadas salientes.
           </p>

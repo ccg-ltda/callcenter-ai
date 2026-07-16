@@ -1,5 +1,5 @@
 /**
- * CallCenter IA -> Google Calendar webhook.
+ * Contact Center IA -> Google Calendar webhook.
  *
  * Script properties required:
  * - WEBHOOK_SECRET: long random value shared with Vercel.
@@ -13,7 +13,7 @@ function jsonResponse(payload) {
 }
 
 function doGet() {
-  return jsonResponse({ ok: true, service: 'CallCenter IA Calendar' });
+  return jsonResponse({ ok: true, service: 'Contact Center IA Calendar' });
 }
 
 function doPost(event) {

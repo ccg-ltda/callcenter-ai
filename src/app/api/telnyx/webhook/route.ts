@@ -76,7 +76,7 @@ async function handleConversationEnded(telnyxCallId: string, payload: any) {
     try {
       const event = await createCalendarEvent({
         title: `Reunión con ${call.contact?.full_name || 'contacto'}`,
-        description: `Reunión agendada automáticamente por CallCenter IA.\n\n${summary.summary}`,
+        description: `Reunión agendada automáticamente por Contact Center IA.\n\n${summary.summary}`,
         scheduledAt: summary.proposedDateTime, durationMin: 15, timezone: settings?.timezone || 'America/Bogota',
       });
       googleEventId = event.id;
