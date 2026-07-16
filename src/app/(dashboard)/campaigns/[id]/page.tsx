@@ -11,14 +11,14 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } fro
 import CSVImporter from '@/components/CSVImporter';
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  draft:    { label: 'Borrador', color: 'text-zinc-400 bg-zinc-800/50 border-zinc-700' },
+  draft:    { label: 'Borrador', color: 'text-muted-foreground bg-muted/50 border-zinc-700' },
   active:   { label: 'Activa',   color: 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/25' },
   paused:   { label: 'Pausada',  color: 'text-amber-400 bg-amber-500/10 border-amber-500/25' },
   finished: { label: 'Finalizada', color: 'text-blue-400 bg-blue-500/10 border-blue-500/25' },
 };
 
 const CONTACT_STATUS_MAP: Record<string, { label: string; color: string }> = {
-  pending:   { label: 'Pendiente',  color: 'text-zinc-400 bg-zinc-800 border-zinc-700' },
+  pending:   { label: 'Pendiente',  color: 'text-muted-foreground bg-muted border-zinc-700' },
   calling:   { label: 'Llamando',   color: 'text-blue-400 bg-blue-500/10 border-blue-500/25' },
   answered:  { label: 'Contestó',   color: 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/25' },
   no_answer: { label: 'No contestó', color: 'text-amber-400 bg-amber-500/10 border-amber-500/25' },
@@ -80,7 +80,7 @@ export default function CampaignDetailPage() {
   );
 
   if (!campaign) return (
-    <div className="text-center py-20 text-zinc-500">Campaña no encontrada.</div>
+    <div className="text-center py-20 text-muted-foreground">Campaña no encontrada.</div>
   );
 
   const statusInfo = STATUS_MAP[campaign.status] || STATUS_MAP.draft;
@@ -102,12 +102,12 @@ export default function CampaignDetailPage() {
           </Link>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-extrabold text-white">{campaign.name}</h1>
+              <h1 className="text-2xl font-extrabold text-foreground">{campaign.name}</h1>
               <span className={`text-[11px] font-semibold font-mono px-2.5 py-0.5 rounded-full border ${statusInfo.color}`}>
                 {statusInfo.label}
               </span>
             </div>
-            <p className="text-zinc-400 text-xs mt-0.5">
+            <p className="text-muted-foreground text-xs mt-0.5">
               Creada {new Date(campaign.createdAt).toLocaleDateString('es-AR')}
               {campaign.launchedAt && ` · Lanzada ${new Date(campaign.launchedAt).toLocaleDateString('es-AR')}`}
             </p>
@@ -125,7 +125,7 @@ export default function CampaignDetailPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Contactos', value: campaign.totalContacts || contacts.length, icon: Users, color: 'text-zinc-400' },
+          { label: 'Contactos', value: campaign.totalContacts || contacts.length, icon: Users, color: 'text-muted-foreground' },
           { label: 'Llamadas', value: campaign.callsMade, icon: PhoneCall, color: 'text-blue-400' },
           { label: 'Reuniones', value: campaign.meetingsBooked, icon: CalendarCheck, color: 'text-[#3b82f6]' },
           { label: 'Costo total', value: `$${(campaign.totalCostUsd || 0).toFixed(2)}`, icon: DollarSign, color: 'text-amber-400' },
@@ -135,10 +135,10 @@ export default function CampaignDetailPage() {
             <Card key={i}>
               <CardContent className="p-5 flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-zinc-500 uppercase tracking-wider block">{kpi.label}</span>
-                  <span className="text-2xl font-bold text-white mt-1 block">{kpi.value}</span>
+                  <span className="text-xs text-muted-foreground uppercase tracking-wider block">{kpi.label}</span>
+                  <span className="text-2xl font-bold text-foreground mt-1 block">{kpi.value}</span>
                 </div>
-                <div className={`p-2 rounded-lg bg-zinc-800/50 ${kpi.color}`}>
+                <div className={`p-2 rounded-lg bg-muted/50 ${kpi.color}`}>
                   <Icon size={18} />
                 </div>
               </CardContent>
@@ -150,11 +150,11 @@ export default function CampaignDetailPage() {
       {/* Progress bar */}
       {campaign.totalContacts > 0 && (
         <div className="space-y-1.5">
-          <div className="flex justify-between text-xs text-zinc-400">
+          <div className="flex justify-between text-xs text-muted-foreground">
             <span>Progreso de campaña</span>
             <span className="font-mono">{campaign.callsMade}/{campaign.totalContacts} llamadas ({contactRate}%)</span>
           </div>
-          <div className="h-2 w-full bg-[#0b0f14] rounded-full border border-[#1f293d]/30">
+          <div className="h-2 w-full bg-background rounded-full border border-border/30">
             <div
               className="h-full rounded-full bg-gradient-to-r from-[#3b82f6] to-[#2563eb] transition-all duration-700"
               style={{ width: `${Math.min(contactRate, 100)}%` }}
@@ -180,7 +180,7 @@ export default function CampaignDetailPage() {
         <CardContent className="space-y-4">
           {/* CSV Importer */}
           {showImporter && (
-            <div className="border border-[#1f293d] rounded-xl p-5 bg-[#0b0f14]/30">
+            <div className="border border-border rounded-xl p-5 bg-background/30">
               <CSVImporter campaignId={id} onImportComplete={handleImportComplete} />
             </div>
           )}
@@ -195,7 +195,7 @@ export default function CampaignDetailPage() {
                   className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all cursor-pointer ${
                     statusFilter === s
                       ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]'
-                      : 'border-[#1f293d] text-zinc-400 hover:text-white hover:border-zinc-600'
+                      : 'border-border text-muted-foreground hover:text-foreground hover:border-zinc-600'
                   }`}
                 >
                   {s === 'all' ? `Todos (${contacts.length})` : CONTACT_STATUS_MAP[s]?.label}
@@ -207,30 +207,30 @@ export default function CampaignDetailPage() {
           {/* Contacts table */}
           {contacts.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center">
-              <Users size={32} className="text-zinc-600" />
-              <p className="text-sm text-zinc-500">
-                No hay contactos importados aún. Usa el botón <strong className="text-zinc-300">Importar CSV</strong> para cargar tu lista.
+              <Users size={32} className="text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                No hay contactos importados aún. Usa el botón <strong className="text-muted-foreground">Importar CSV</strong> para cargar tu lista.
               </p>
             </div>
           ) : (
-            <div className="border border-[#1f293d] rounded-xl overflow-hidden">
+            <div className="border border-border rounded-xl overflow-hidden">
               <table className="w-full text-xs">
-                <thead className="bg-[#111823]">
+                <thead className="bg-surface">
                   <tr>
-                    <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider">Nombre</th>
-                    <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider hidden sm:table-cell">Teléfono</th>
-                    <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider hidden md:table-cell">Empresa</th>
-                    <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider">Estado</th>
+                    <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider">Nombre</th>
+                    <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider hidden sm:table-cell">Teléfono</th>
+                    <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider hidden md:table-cell">Empresa</th>
+                    <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider">Estado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1f293d]/50">
+                <tbody className="divide-y divide-border/50">
                   {filteredContacts.map((c) => {
-                    const st = CONTACT_STATUS_MAP[c.status] || { label: c.status, color: 'text-zinc-400 bg-zinc-800 border-zinc-700' };
+                    const st = CONTACT_STATUS_MAP[c.status] || { label: c.status, color: 'text-muted-foreground bg-muted border-zinc-700' };
                     return (
-                      <tr key={c.id} className="hover:bg-[#111823]/50 transition-colors">
-                        <td className="p-3 text-zinc-200 font-medium">{c.fullName}</td>
-                        <td className="p-3 font-mono text-zinc-400 hidden sm:table-cell">{c.phone}</td>
-                        <td className="p-3 text-zinc-500 hidden md:table-cell">{c.company || '—'}</td>
+                      <tr key={c.id} className="hover:bg-surface/50 transition-colors">
+                        <td className="p-3 text-foreground font-medium">{c.fullName}</td>
+                        <td className="p-3 font-mono text-muted-foreground hidden sm:table-cell">{c.phone}</td>
+                        <td className="p-3 text-muted-foreground hidden md:table-cell">{c.company || '—'}</td>
                         <td className="p-3">
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${st.color}`}>
                             {st.label}
@@ -242,7 +242,7 @@ export default function CampaignDetailPage() {
                 </tbody>
               </table>
               {filteredContacts.length === 0 && (
-                <div className="text-center py-8 text-xs text-zinc-500">
+                <div className="text-center py-8 text-xs text-muted-foreground">
                   No hay contactos con el estado seleccionado.
                 </div>
               )}

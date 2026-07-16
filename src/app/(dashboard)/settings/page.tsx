@@ -133,8 +133,8 @@ export default function SettingsPage() {
     <div className="max-w-4xl mx-auto space-y-8">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold text-white">Configuración</h1>
-        <p className="text-zinc-400 mt-1 text-sm">Gestiona tus credenciales de telefonía, integración de Google Calendar y horarios de llamadas.</p>
+        <h1 className="text-3xl font-extrabold text-foreground">Configuración</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Gestiona tus credenciales de telefonía, integración de Google Calendar y horarios de llamadas.</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
@@ -170,7 +170,7 @@ export default function SettingsPage() {
                 value={telnyxApiKey}
                 onChange={(e) => setTelnyxApiKey(e.target.value)}
               />
-              <p className="text-[11px] text-zinc-500">
+              <p className="text-[11px] text-muted-foreground">
                 La API Key de Telnyx se guarda de forma segura y encriptada en la base de datos Supabase.
               </p>
             </div>
@@ -186,11 +186,11 @@ export default function SettingsPage() {
                     value={telnyxPhoneNumber}
                     onChange={(e) => setTelnyxPhoneNumber(e.target.value)}
                   />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-zinc-500">
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
                     <Phone size={16} />
                   </div>
                 </div>
-                <p className="text-[11px] text-zinc-500">
+                <p className="text-[11px] text-muted-foreground">
                   Número principal comprado para lanzar campañas de llamadas salientes.
                 </p>
               </div>
@@ -205,11 +205,11 @@ export default function SettingsPage() {
                     value={telnyxAssistantId}
                     onChange={(e) => setTelnyxAssistantId(e.target.value)}
                   />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-zinc-500">
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
                     <Bot size={16} />
                   </div>
                 </div>
-                <p className="text-[11px] text-zinc-500">
+                <p className="text-[11px] text-muted-foreground">
                   ID del agente de voz de Telnyx por defecto para las llamadas.
                 </p>
               </div>
@@ -291,15 +291,15 @@ export default function SettingsPage() {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between bg-[#0b0f14] p-4 rounded-xl border border-[#1f293d]/50">
+            <div className="flex items-center justify-between bg-background p-4 rounded-xl border border-border/50">
               <div className="flex items-center gap-4">
                 <div className={cn(
                   "h-3 w-3 rounded-full shadow-[0_0_10px_currentColor]",
-                  googleConnected ? "bg-[#3b82f6] text-[#3b82f6]" : "bg-zinc-600 text-zinc-600"
+                  googleConnected ? "bg-[#3b82f6] text-[#3b82f6]" : "bg-muted text-muted-foreground"
                 )} />
                 <div>
                   <span className="font-semibold text-sm block">Google Calendar</span>
-                  <span className="text-xs text-zinc-400">
+                  <span className="text-xs text-muted-foreground">
                     {googleConnected
                       ? googleProvider === 'apps-script'
                         ? 'Google Apps Script activo: las reuniones se crearán automáticamente.'
@@ -344,3 +344,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

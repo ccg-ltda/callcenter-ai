@@ -1,4 +1,5 @@
 import Sidebar from '@/components/Sidebar';
+import ThemeToggle from '@/components/ThemeToggle';
 import { ShieldCheck, PhoneCall, Calendar } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -9,17 +10,17 @@ export default function DashboardLayout({
   const isMock = process.env.NEXT_PUBLIC_USE_MOCK_SERVICES === 'true';
 
   return (
-    <div className="min-h-screen bg-[#0b0f14] text-[#f3f4f6] flex">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar navigation */}
       <Sidebar />
 
       {/* Main content wrapper */}
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
         {/* Top Header bar */}
-        <header className="h-20 border-b border-[#1f293d] bg-[#0b0f14]/80 backdrop-blur sticky top-0 z-30 px-6 lg:px-8 flex items-center justify-between">
+        <header className="h-20 border-b border-border bg-background/80 backdrop-blur sticky top-0 z-30 px-6 lg:px-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {/* Page title space (gets filled dynamically or static default) */}
-            <h2 className="font-semibold text-lg tracking-wide text-white hidden sm:block">Panel de Control</h2>
+            <h2 className="font-semibold text-lg tracking-wide text-foreground hidden sm:block">Panel de Control</h2>
           </div>
           
           <div className="flex items-center gap-3">
@@ -32,10 +33,11 @@ export default function DashboardLayout({
                 </span>
               )}
               
-              <div className="hidden md:flex items-center gap-1.5 text-zinc-400 bg-[#111823] border border-[#1f293d] px-2.5 py-1 rounded-full">
+              <div className="hidden md:flex items-center gap-1.5 text-muted-foreground bg-surface border border-border px-2.5 py-1 rounded-full">
                 <ShieldCheck size={14} className="text-[#3b82f6]" />
                 Supabase Conectado
               </div>
+              <ThemeToggle />
             </div>
           </div>
         </header>

@@ -15,6 +15,7 @@ import {
   CheckCircle,
   HelpCircle
 } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 import { 
   Card, 
   CardHeader, 
@@ -170,7 +171,10 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b0f14] text-[#f3f4f6] flex items-center justify-center p-6 relative overflow-hidden font-sans">
+    <div className="min-h-screen bg-background text-foreground flex items-center justify-center p-6 relative overflow-hidden font-sans">
+      <div className="absolute right-4 top-4 z-20">
+        <ThemeToggle />
+      </div>
       {/* Visual background decor */}
       <div className="absolute w-96 h-96 rounded-full bg-[#3b82f6]/5 -top-48 -left-48 blur-3xl pointer-events-none" />
       <div className="absolute w-96 h-96 rounded-full bg-[#3b82f6]/3 -bottom-48 -right-48 blur-3xl pointer-events-none" />
@@ -178,18 +182,18 @@ export default function OnboardingPage() {
       <div className="w-full max-w-2xl relative z-10 space-y-8">
         {/* Header */}
         <div className="text-center">
-          <div className="h-12 w-12 rounded-xl bg-[#3b82f6] flex items-center justify-center text-[#0b0f14] font-extrabold text-2xl mx-auto shadow-lg shadow-[#3b82f6]/20">
+          <div className="h-12 w-12 rounded-xl bg-[#3b82f6] flex items-center justify-center text-accent-foreground font-extrabold text-2xl mx-auto shadow-lg shadow-[#3b82f6]/20">
             CC
           </div>
-          <h1 className="text-3xl font-extrabold mt-4 text-white tracking-tight">Bienvenido a Contact Center IA</h1>
-          <p className="text-zinc-400 mt-2 text-sm max-w-md mx-auto">
+          <h1 className="text-3xl font-extrabold mt-4 text-foreground tracking-tight">Bienvenido a Contact Center IA</h1>
+          <p className="text-muted-foreground mt-2 text-sm max-w-md mx-auto">
             Configura tus servicios en unos simples pasos y empieza a automatizar tus campañas de llamadas salientes.
           </p>
         </div>
 
         {/* Steps Progress bar */}
         <div className="flex items-center justify-between max-w-md mx-auto relative px-4">
-          <div className="absolute left-4 right-4 h-0.5 bg-[#1f293d] top-1/2 -translate-y-1/2 -z-10" />
+          <div className="absolute left-4 right-4 h-0.5 bg-surface-2 top-1/2 -translate-y-1/2 -z-10" />
           <div 
             className="absolute left-4 h-0.5 bg-[#3b82f6] top-1/2 -translate-y-1/2 -z-10 transition-all duration-300"
             style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
@@ -210,16 +214,16 @@ export default function OnboardingPage() {
                 <div 
                   className={`h-9 w-9 rounded-full flex items-center justify-center border font-semibold text-sm transition-all ${
                     isCompleted 
-                      ? 'bg-[#3b82f6] border-[#3b82f6] text-[#0b0f14]' 
+                      ? 'bg-[#3b82f6] border-[#3b82f6] text-accent-foreground' 
                       : isActive 
-                        ? 'bg-[#0b0f14] border-[#3b82f6] text-[#3b82f6] shadow-[0_0_15px_rgba(59,130,246,0.2)] font-bold' 
-                        : 'bg-[#0b0f14] border-[#1f293d] text-zinc-500'
+                        ? 'bg-background border-[#3b82f6] text-[#3b82f6] shadow-[0_0_15px_rgba(59,130,246,0.2)] font-bold' 
+                        : 'bg-background border-border text-muted-foreground'
                   }`}
                 >
                   {isCompleted ? <Check size={16} /> : item.step}
                 </div>
                 <span className={`text-[10px] uppercase font-semibold tracking-wider ${
-                  isActive ? 'text-[#3b82f6] font-bold' : 'text-zinc-500'
+                  isActive ? 'text-[#3b82f6] font-bold' : 'text-muted-foreground'
                 }`}>
                   {item.label}
                 </span>
@@ -252,7 +256,7 @@ export default function OnboardingPage() {
                     value={telnyxApiKey}
                     onChange={(e) => setTelnyxApiKey(e.target.value)}
                   />
-                  <p className="text-xs text-zinc-500 leading-relaxed">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     Si no tienes una API Key o quieres probar de forma segura, déjalo en blanco y utilizaremos credenciales de prueba en el modo simulación.
                   </p>
                 </div>
@@ -321,11 +325,11 @@ export default function OnboardingPage() {
                 {numbersList.length > 0 && (
                   <div className="space-y-2 mt-4">
                     <Label>Números Encontrados</Label>
-                    <div className="border border-[#1f293d] rounded-lg divide-y divide-[#1f293d]/50 bg-[#0b0f14]/50 max-h-[180px] overflow-y-auto">
+                    <div className="border border-border rounded-lg divide-y divide-border/50 bg-background/50 max-h-[180px] overflow-y-auto">
                       {numbersList.map((num) => (
                         <label 
                           key={num.phoneNumber} 
-                          className={`flex items-center justify-between p-3 cursor-pointer hover:bg-[#111823]/60 transition-colors ${
+                          className={`flex items-center justify-between p-3 cursor-pointer hover:bg-surface/60 transition-colors ${
                             selectedNumber === num.phoneNumber ? 'bg-[#3b82f6]/5 border-l-2 border-[#3b82f6]' : ''
                           }`}
                         >
@@ -341,7 +345,7 @@ export default function OnboardingPage() {
                           </div>
                           <div className="text-right">
                             <span className="text-xs text-[#3b82f6] font-semibold font-mono">${num.priceMonthly}/mes</span>
-                            <span className="text-[10px] text-zinc-500 block uppercase font-mono">{num.type}</span>
+                            <span className="text-[10px] text-muted-foreground block uppercase font-mono">{num.type}</span>
                           </div>
                         </label>
                       ))}
@@ -414,7 +418,7 @@ export default function OnboardingPage() {
                     value={agentScript}
                     onChange={(e) => setAgentScript(e.target.value)}
                   />
-                  <p className="text-[10px] text-zinc-500 leading-relaxed">
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
                     Instrucciones explícitas de comportamiento. El agente usará esto para guiar la llamada hacia el agendamiento.
                   </p>
                 </div>
@@ -443,14 +447,14 @@ export default function OnboardingPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4 py-6">
-                <div className="flex items-center justify-between bg-[#0b0f14] p-4 rounded-xl border border-[#1f293d]/80">
+                <div className="flex items-center justify-between bg-background p-4 rounded-xl border border-border/80">
                   <div className="flex items-center gap-4">
                     <div className={`h-3.5 w-3.5 rounded-full ${
-                      googleConnected ? 'bg-[#3b82f6] shadow-[0_0_10px_#3b82f6]' : 'bg-zinc-600'
+                      googleConnected ? 'bg-[#3b82f6] shadow-[0_0_10px_#3b82f6]' : 'bg-muted'
                     }`} />
                     <div>
                       <span className="font-semibold text-sm block">Google Calendar</span>
-                      <span className="text-xs text-zinc-400">
+                      <span className="text-xs text-muted-foreground">
                         {googleConnected ? 'Conexión activa' : 'Sin conectar'}
                       </span>
                     </div>
@@ -483,3 +487,4 @@ export default function OnboardingPage() {
     </div>
   );
 }
+

@@ -173,8 +173,8 @@ export default function AgentsPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold text-white">Agentes de Voz de IA</h1>
-        <p className="text-zinc-400 mt-1 text-sm">Configura la voz, objetivos de venta y el guion (prompt de sistema) de tus agentes conversacionales.</p>
+        <h1 className="text-3xl font-extrabold text-foreground">Agentes de Voz de IA</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Configura la voz, objetivos de venta y el guion (prompt de sistema) de tus agentes conversacionales.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -188,27 +188,27 @@ export default function AgentsPage() {
             </CardHeader>
             <CardContent className="p-0">
               {agentsList.length === 0 ? (
-                <div className="text-center py-12 text-zinc-500 text-sm">
+                <div className="text-center py-12 text-muted-foreground text-sm">
                   No hay agentes creados. Utiliza el formulario para crear el primero.
                 </div>
               ) : (
-                <div className="divide-y divide-[#1f293d]/50">
+                <div className="divide-y divide-border/50">
                   {agentsList.map((agent) => (
                     <div 
                       key={agent.id} 
-                      className="p-5 flex items-start justify-between hover:bg-[#1f293d]/10 transition-colors"
+                      className="p-5 flex items-start justify-between hover:bg-surface-2/10 transition-colors"
                     >
                       <div className="space-y-1.5 max-w-lg">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">{agent.name}</span>
+                          <span className="font-bold text-foreground text-sm">{agent.name}</span>
                           <span className="text-[10px] bg-[#3b82f6]/10 text-[#3b82f6] px-2 py-0.5 rounded font-semibold font-mono">
                             {agent.goal === 'agendar_reunion' ? 'Agendar Reunión' : agent.goal}
                           </span>
                         </div>
-                        <p className="text-xs text-zinc-400 font-mono truncate">
+                        <p className="text-xs text-muted-foreground font-mono truncate">
                           Voz: {voiceOptions.find(o => o.value === agent.voice)?.label || agent.voice} • Duración: {agent.meetingDurationMin || 15} min
                         </p>
-                        <p className="text-xs text-zinc-500 italic leading-relaxed line-clamp-2">
+                        <p className="text-xs text-muted-foreground italic leading-relaxed line-clamp-2">
                           "{agent.script}"
                         </p>
                       </div>
@@ -264,7 +264,7 @@ export default function AgentsPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-start gap-2 text-zinc-500 text-[11px] leading-relaxed py-1">
+                <div className="flex items-start gap-2 text-muted-foreground text-[11px] leading-relaxed py-1">
                   <AlertCircle size={14} className="shrink-0 mt-0.5 text-[#3b82f6]" />
                   <span>
                     El número de destino debe incluir el código de país. En modo simulación, 
@@ -404,3 +404,4 @@ export default function AgentsPage() {
     </div>
   );
 }
+

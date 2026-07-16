@@ -10,7 +10,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@/components/ui';
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
-  draft:    { label: 'Borrador', color: 'text-zinc-400 bg-zinc-800/50 border-zinc-700/50', icon: Clock },
+  draft:    { label: 'Borrador', color: 'text-muted-foreground bg-muted/50 border-zinc-700/50', icon: Clock },
   active:   { label: 'Activa', color: 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/25', icon: Rocket },
   paused:   { label: 'Pausada', color: 'text-amber-400 bg-amber-500/10 border-amber-500/25', icon: PauseCircle },
   finished: { label: 'Finalizada', color: 'text-blue-400 bg-blue-500/10 border-blue-500/25', icon: CheckCircle2 },
@@ -64,8 +64,8 @@ export default function CampaignsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-white">Campañas</h1>
-          <p className="text-zinc-400 text-sm mt-1">Administra y lanza tus campañas de llamadas salientes.</p>
+          <h1 className="text-3xl font-extrabold text-foreground">Campañas</h1>
+          <p className="text-muted-foreground text-sm mt-1">Administra y lanza tus campañas de llamadas salientes.</p>
         </div>
         <Link href="/campaigns/new">
           <Button className="flex items-center gap-2">
@@ -76,14 +76,14 @@ export default function CampaignsPage() {
 
       {/* Campaigns list */}
       {campaigns.length === 0 ? (
-        <Card className="border-dashed border-[#1f293d] bg-transparent">
+        <Card className="border-dashed border-border bg-transparent">
           <CardContent className="flex flex-col items-center justify-center py-20 text-center space-y-4">
             <div className="h-16 w-16 rounded-full bg-[#3b82f6]/10 text-[#3b82f6] flex items-center justify-center">
               <Compass size={32} />
             </div>
             <div className="max-w-sm space-y-2">
-              <h3 className="text-lg font-semibold text-white">No hay campañas creadas</h3>
-              <p className="text-xs text-zinc-500 leading-relaxed">
+              <h3 className="text-lg font-semibold text-foreground">No hay campañas creadas</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">
                 Crea tu primera campaña, asígnale un agente de voz, sube tus contactos y lanza las llamadas.
               </p>
             </div>
@@ -113,13 +113,13 @@ export default function CampaignsPage() {
                     {/* Left: name + status */}
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-bold text-white">{camp.name}</h3>
+                        <h3 className="text-lg font-bold text-foreground">{camp.name}</h3>
                         <span className={`flex items-center gap-1 text-[11px] font-semibold font-mono px-2.5 py-0.5 rounded-full border ${statusInfo.color}`}>
                           <StatusIcon size={11} />
                           {statusInfo.label}
                         </span>
                       </div>
-                      <p className="text-xs text-zinc-500 font-mono">
+                      <p className="text-xs text-muted-foreground font-mono">
                         Creada {camp.createdAt ? new Date(camp.createdAt).toLocaleDateString('es-AR') : '—'}
                         {camp.launchedAt && ` · Lanzada ${new Date(camp.launchedAt).toLocaleDateString('es-AR')}`}
                       </p>
@@ -127,25 +127,25 @@ export default function CampaignsPage() {
 
                     {/* Middle: KPI pills */}
                     <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-1.5 bg-[#0b0f14] border border-[#1f293d]/50 px-3 py-1.5 rounded-lg">
-                        <Users size={13} className="text-zinc-400" />
-                        <span className="text-xs font-semibold text-white">{camp.totalContacts}</span>
-                        <span className="text-xs text-zinc-500">contactos</span>
+                      <div className="flex items-center gap-1.5 bg-background border border-border/50 px-3 py-1.5 rounded-lg">
+                        <Users size={13} className="text-muted-foreground" />
+                        <span className="text-xs font-semibold text-foreground">{camp.totalContacts}</span>
+                        <span className="text-xs text-muted-foreground">contactos</span>
                       </div>
-                      <div className="flex items-center gap-1.5 bg-[#0b0f14] border border-[#1f293d]/50 px-3 py-1.5 rounded-lg">
+                      <div className="flex items-center gap-1.5 bg-background border border-border/50 px-3 py-1.5 rounded-lg">
                         <PhoneCall size={13} className="text-blue-400" />
-                        <span className="text-xs font-semibold text-white">{camp.callsMade}</span>
-                        <span className="text-xs text-zinc-500">llamadas ({contactRate}%)</span>
+                        <span className="text-xs font-semibold text-foreground">{camp.callsMade}</span>
+                        <span className="text-xs text-muted-foreground">llamadas ({contactRate}%)</span>
                       </div>
-                      <div className="flex items-center gap-1.5 bg-[#0b0f14] border border-[#1f293d]/50 px-3 py-1.5 rounded-lg">
+                      <div className="flex items-center gap-1.5 bg-background border border-border/50 px-3 py-1.5 rounded-lg">
                         <CalendarCheck size={13} className="text-[#3b82f6]" />
-                        <span className="text-xs font-semibold text-white">{camp.meetingsBooked}</span>
-                        <span className="text-xs text-zinc-500">reuniones</span>
+                        <span className="text-xs font-semibold text-foreground">{camp.meetingsBooked}</span>
+                        <span className="text-xs text-muted-foreground">reuniones</span>
                       </div>
-                      <div className="flex items-center gap-1.5 bg-[#0b0f14] border border-[#1f293d]/50 px-3 py-1.5 rounded-lg">
+                      <div className="flex items-center gap-1.5 bg-background border border-border/50 px-3 py-1.5 rounded-lg">
                         <DollarSign size={13} className="text-amber-400" />
-                        <span className="text-xs font-semibold text-white">${costPerMeeting}</span>
-                        <span className="text-xs text-zinc-500">/ reunión</span>
+                        <span className="text-xs font-semibold text-foreground">${costPerMeeting}</span>
+                        <span className="text-xs text-muted-foreground">/ reunión</span>
                       </div>
                     </div>
 
@@ -177,11 +177,11 @@ export default function CampaignsPage() {
                   {/* Progress bar */}
                   {camp.totalContacts > 0 && (
                     <div className="mt-5 space-y-1.5">
-                      <div className="flex justify-between text-[11px] text-zinc-500">
+                      <div className="flex justify-between text-[11px] text-muted-foreground">
                         <span>Progreso de llamadas</span>
                         <span>{camp.callsMade}/{camp.totalContacts}</span>
                       </div>
-                      <div className="h-1.5 w-full bg-[#0b0f14] rounded-full border border-[#1f293d]/30">
+                      <div className="h-1.5 w-full bg-background rounded-full border border-border/30">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-[#3b82f6] to-[#2563eb] transition-all duration-500"
                           style={{ width: `${contactRate}%` }}
@@ -198,3 +198,4 @@ export default function CampaignsPage() {
     </div>
   );
 }
+

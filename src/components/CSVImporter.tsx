@@ -161,7 +161,7 @@ Carlos López,+34600555123,Initech`;
           className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-300 ${
             isDragging
               ? 'border-[#3b82f6] bg-[#3b82f6]/5 scale-[1.01]'
-              : 'border-[#1f293d] hover:border-[#3b82f6]/50 hover:bg-[#3b82f6]/5'
+              : 'border-border hover:border-[#3b82f6]/50 hover:bg-[#3b82f6]/5'
           }`}
         >
           <input
@@ -172,17 +172,17 @@ Carlos López,+34600555123,Initech`;
             onChange={handleFileInput}
           />
           <div className="flex flex-col items-center gap-3">
-            <div className={`p-4 rounded-full transition-all ${isDragging ? 'bg-[#3b82f6]/20 text-[#3b82f6]' : 'bg-zinc-800/50 text-zinc-400'}`}>
+            <div className={`p-4 rounded-full transition-all ${isDragging ? 'bg-[#3b82f6]/20 text-[#3b82f6]' : 'bg-muted/50 text-muted-foreground'}`}>
               <Upload size={28} />
             </div>
             <div>
-              <p className="font-semibold text-white text-sm">
+              <p className="font-semibold text-foreground text-sm">
                 {isDragging ? 'Suelta el archivo aquí' : 'Arrastra y suelta tu CSV aquí'}
               </p>
-              <p className="text-xs text-zinc-500 mt-1">o haz clic para seleccionar el archivo</p>
+              <p className="text-xs text-muted-foreground mt-1">o haz clic para seleccionar el archivo</p>
             </div>
-            <p className="text-[11px] text-zinc-600 font-mono">
-              Columnas esperadas: <span className="text-zinc-400">nombre, telefono, empresa</span>
+            <p className="text-[11px] text-muted-foreground font-mono">
+              Columnas esperadas: <span className="text-muted-foreground">nombre, telefono, empresa</span>
             </p>
           </div>
         </div>
@@ -192,41 +192,41 @@ Carlos López,+34600555123,Initech`;
       {parsed.length > 0 && !imported && (
         <div className="space-y-3">
           {/* File info & stats */}
-          <div className="flex items-center justify-between bg-[#0b0f14] border border-[#1f293d] rounded-xl p-4">
+          <div className="flex items-center justify-between bg-background border border-border rounded-xl p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-lg bg-[#3b82f6]/10 text-[#3b82f6]">
                 <FileText size={18} />
               </div>
               <div>
-                <span className="text-sm font-semibold text-white block">{fileName}</span>
-                <span className="text-xs text-zinc-400">
+                <span className="text-sm font-semibold text-foreground block">{fileName}</span>
+                <span className="text-xs text-muted-foreground">
                   {parsed.length} filas detectadas · <span className="text-[#3b82f6]">{validContacts.length} válidos</span>
                   {invalidContacts.length > 0 && <span className="text-red-400"> · {invalidContacts.length} con errores</span>}
                 </span>
               </div>
             </div>
-            <button onClick={handleReset} className="text-zinc-500 hover:text-white p-1 rounded cursor-pointer transition-colors">
+            <button onClick={handleReset} className="text-muted-foreground hover:text-foreground p-1 rounded cursor-pointer transition-colors">
               <X size={18} />
             </button>
           </div>
 
           {/* Preview table */}
-          <div className="border border-[#1f293d] rounded-xl overflow-hidden max-h-64 overflow-y-auto">
+          <div className="border border-border rounded-xl overflow-hidden max-h-64 overflow-y-auto">
             <table className="w-full text-xs">
-              <thead className="bg-[#111823] sticky top-0">
+              <thead className="bg-surface sticky top-0">
                 <tr>
-                  <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider">Nombre</th>
-                  <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider">Teléfono</th>
-                  <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider">Empresa</th>
-                  <th className="text-left p-3 text-zinc-400 font-semibold uppercase tracking-wider">Estado</th>
+                  <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider">Nombre</th>
+                  <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider">Teléfono</th>
+                  <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider">Empresa</th>
+                  <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider">Estado</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1f293d]/50">
+              <tbody className="divide-y divide-border/50">
                 {parsed.map((c, i) => (
-                  <tr key={i} className={`${c._isValid ? 'hover:bg-[#111823]/50' : 'bg-red-900/10'} transition-colors`}>
-                    <td className="p-3 text-zinc-200">{c.fullName}</td>
-                    <td className="p-3 font-mono text-zinc-300">{c.phone}</td>
-                    <td className="p-3 text-zinc-400">{c.company || '—'}</td>
+                  <tr key={i} className={`${c._isValid ? 'hover:bg-surface/50' : 'bg-red-900/10'} transition-colors`}>
+                    <td className="p-3 text-foreground">{c.fullName}</td>
+                    <td className="p-3 font-mono text-muted-foreground">{c.phone}</td>
+                    <td className="p-3 text-muted-foreground">{c.company || '—'}</td>
                     <td className="p-3">
                       {c._isValid ? (
                         <span className="flex items-center gap-1 text-[#3b82f6]">
@@ -267,8 +267,8 @@ Carlos López,+34600555123,Initech`;
             <CheckCircle size={22} />
           </div>
           <div>
-            <span className="font-semibold text-white block">{validContacts.length} contactos importados con éxito</span>
-            <span className="text-xs text-zinc-400">Los contactos están listos para ser incluidos en la campaña.</span>
+            <span className="font-semibold text-foreground block">{validContacts.length} contactos importados con éxito</span>
+            <span className="text-xs text-muted-foreground">Los contactos están listos para ser incluidos en la campaña.</span>
           </div>
           <Button variant="outline" size="sm" onClick={handleReset} className="ml-auto">
             Importar más
@@ -288,3 +288,4 @@ Carlos López,+34600555123,Initech`;
     </div>
   );
 }
+

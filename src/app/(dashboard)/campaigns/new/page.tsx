@@ -53,8 +53,8 @@ export default function NewCampaignPage() {
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-extrabold text-white">Nueva Campaña</h1>
-          <p className="text-zinc-400 text-sm mt-0.5">Configura el nombre y agente, luego importarás los contactos.</p>
+          <h1 className="text-3xl font-extrabold text-foreground">Nueva Campaña</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Configura el nombre y agente, luego importarás los contactos.</p>
         </div>
       </div>
 
@@ -86,7 +86,7 @@ export default function NewCampaignPage() {
                   onChange={e => setAgentId(e.target.value)}
                 />
               )}
-              <p className="text-[11px] text-zinc-500">El agente de voz será quien realice y conduzca las conversaciones.</p>
+              <p className="text-[11px] text-muted-foreground">El agente de voz será quien realice y conduzca las conversaciones.</p>
             </div>
           </CardContent>
           <CardFooter className="justify-end gap-3">
@@ -103,3 +103,4 @@ export default function NewCampaignPage() {
     </div>
   );
 }
+

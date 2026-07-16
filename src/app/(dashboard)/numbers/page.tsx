@@ -121,8 +121,8 @@ export default function NumbersPage() {
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold text-white">Comprar Número de Teléfono</h1>
-        <p className="text-zinc-400 mt-1 text-sm">Adquiere un número telefónico local en Telnyx para asociar tus campañas y realizar llamadas.</p>
+        <h1 className="text-3xl font-extrabold text-foreground">Comprar Número de Teléfono</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Adquiere un número telefónico local en Telnyx para asociar tus campañas y realizar llamadas.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -135,14 +135,14 @@ export default function NumbersPage() {
               <CardDescription>Número actual asignado para las campañas.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="p-4 rounded-xl bg-[#0b0f14] border border-[#1f293d] flex items-center justify-between">
+              <div className="p-4 rounded-xl bg-background border border-border flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-lg bg-[#3b82f6]/10 text-[#3b82f6]">
                     <Phone size={18} />
                   </div>
                   <div>
-                    <span className="text-xs text-zinc-500 block uppercase font-mono">Número actual</span>
-                    <span className="font-mono text-sm font-bold text-white">{currentNumber}</span>
+                    <span className="text-xs text-muted-foreground block uppercase font-mono">Número actual</span>
+                    <span className="font-mono text-sm font-bold text-foreground">{currentNumber}</span>
                   </div>
                 </div>
                 {currentNumber !== 'Ninguno' && (
@@ -226,34 +226,34 @@ export default function NumbersPage() {
             <CardContent className="flex-1 flex flex-col justify-between">
               {availableNumbers.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
-                  <div className="h-12 w-12 rounded-full bg-zinc-800/40 text-zinc-500 flex items-center justify-center">
+                  <div className="h-12 w-12 rounded-full bg-muted/40 text-muted-foreground flex items-center justify-center">
                     <Search size={22} />
                   </div>
                   <div className="max-w-xs space-y-1">
-                    <h4 className="font-semibold text-zinc-300 text-sm">Realiza una búsqueda</h4>
-                    <p className="text-xs text-zinc-500 leading-relaxed">
+                    <h4 className="font-semibold text-muted-foreground text-sm">Realiza una búsqueda</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       Elige el país y localidad en la izquierda para buscar y comprar nuevos números.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="border border-[#1f293d] rounded-xl overflow-hidden divide-y divide-[#1f293d]/50 bg-[#0b0f14]/30">
+                <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/50 bg-background/30">
                   {availableNumbers.map((num) => (
                     <div 
                       key={num.phoneNumber} 
-                      className="p-4 flex items-center justify-between hover:bg-[#111823]/60 transition-colors"
+                      className="p-4 flex items-center justify-between hover:bg-surface/60 transition-colors"
                     >
                       <div className="space-y-1">
-                        <span className="font-mono text-base font-bold text-white block">{num.phoneNumber}</span>
+                        <span className="font-mono text-base font-bold text-foreground block">{num.phoneNumber}</span>
                         <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-zinc-500 uppercase font-mono">{num.type}</span>
+                          <span className="text-[10px] text-muted-foreground uppercase font-mono">{num.type}</span>
                           <span className="text-[10px] text-[#3b82f6] font-mono font-semibold">{num.provider} Network</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <span className="text-sm font-bold text-white font-mono block">${num.priceMonthly}</span>
-                          <span className="text-[10px] text-zinc-500 block">Facturación mensual</span>
+                          <span className="text-sm font-bold text-foreground font-mono block">${num.priceMonthly}</span>
+                          <span className="text-[10px] text-muted-foreground block">Facturación mensual</span>
                         </div>
                         <Button 
                           onClick={() => handleBuy(num.phoneNumber)} 
@@ -276,7 +276,7 @@ export default function NumbersPage() {
                 </div>
               )}
 
-              <div className="flex items-start gap-2 text-zinc-500 text-[11px] leading-relaxed mt-6 border-t border-[#1f293d]/30 pt-4">
+              <div className="flex items-start gap-2 text-muted-foreground text-[11px] leading-relaxed mt-6 border-t border-border/30 pt-4">
                 <AlertCircle size={14} className="shrink-0 mt-0.5 text-[#3b82f6]" />
                 <span>
                   <strong>Aviso legal:</strong> Asegúrate de verificar las regulaciones locales sobre la compra de números de teléfono en el país seleccionado. Algunos países exigen documentación de domicilio local.
@@ -289,3 +289,4 @@ export default function NumbersPage() {
     </div>
   );
 }
+

@@ -7,7 +7,7 @@ import { Input } from '@/components/ui';
 import Link from 'next/link';
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
-  pending:   { label: 'Pendiente',  color: 'text-zinc-400 bg-zinc-800 border-zinc-700' },
+  pending:   { label: 'Pendiente',  color: 'text-muted-foreground bg-muted border-zinc-700' },
   calling:   { label: 'Llamando',   color: 'text-blue-400 bg-blue-500/10 border-blue-500/25' },
   answered:  { label: 'Contestó',   color: 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/25' },
   no_answer: { label: 'No contestó', color: 'text-amber-400 bg-amber-500/10 border-amber-500/25' },
@@ -47,8 +47,8 @@ export default function ContactsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-extrabold text-white">Contactos</h1>
-        <p className="text-zinc-400 text-sm mt-1">Base de datos global de contactos de todas las campañas.</p>
+        <h1 className="text-3xl font-extrabold text-foreground">Contactos</h1>
+        <p className="text-muted-foreground text-sm mt-1">Base de datos global de contactos de todas las campañas.</p>
       </div>
 
       {/* Summary stat pills */}
@@ -60,11 +60,11 @@ export default function ContactsPage() {
               key={status}
               onClick={() => setStatusFilter(statusFilter === status ? 'all' : status)}
               className={`flex items-center gap-2 text-xs font-semibold px-3 py-1.5 rounded-full border cursor-pointer transition-all ${
-                statusFilter === status ? info.color : 'text-zinc-500 border-[#1f293d] bg-transparent hover:text-zinc-300'
+                statusFilter === status ? info.color : 'text-muted-foreground border-border bg-transparent hover:text-muted-foreground'
               }`}
             >
               {info.label}
-              <span className={`font-mono font-bold ${statusFilter === status ? '' : 'text-zinc-600'}`}>{count}</span>
+              <span className={`font-mono font-bold ${statusFilter === status ? '' : 'text-muted-foreground'}`}>{count}</span>
             </button>
           );
         })}
@@ -78,7 +78,7 @@ export default function ContactsPage() {
               <CardDescription>Para importar contactos, hazlo desde el detalle de cada campaña.</CardDescription>
             </div>
             <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={15} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
               <Input
                 placeholder="Buscar nombre, teléfono..."
                 value={search}
@@ -91,37 +91,37 @@ export default function ContactsPage() {
         <CardContent className="p-0">
           {filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
-              <Users size={32} className="text-zinc-600" />
-              <p className="text-sm text-zinc-500">
+              <Users size={32} className="text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
                 {contacts.length === 0 
                   ? 'No hay contactos. Importa desde el detalle de una campaña.'
                   : 'No hay contactos con los filtros seleccionados.'}
               </p>
             </div>
           ) : (
-            <div className="border-t border-[#1f293d]/50 overflow-x-auto">
+            <div className="border-t border-border/50 overflow-x-auto">
               <table className="w-full text-xs">
-                <thead className="bg-[#111823]">
+                <thead className="bg-surface">
                   <tr>
-                    <th className="text-left p-4 text-zinc-400 font-semibold uppercase tracking-wider">Nombre</th>
-                    <th className="text-left p-4 text-zinc-400 font-semibold uppercase tracking-wider">Teléfono</th>
-                    <th className="text-left p-4 text-zinc-400 font-semibold uppercase tracking-wider hidden md:table-cell">Empresa</th>
-                    <th className="text-left p-4 text-zinc-400 font-semibold uppercase tracking-wider">Estado</th>
-                    <th className="text-left p-4 text-zinc-400 font-semibold uppercase tracking-wider hidden lg:table-cell">Campaña</th>
+                    <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider">Nombre</th>
+                    <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider">Teléfono</th>
+                    <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider hidden md:table-cell">Empresa</th>
+                    <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider">Estado</th>
+                    <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider hidden lg:table-cell">Campaña</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1f293d]/50">
+                <tbody className="divide-y divide-border/50">
                   {filtered.map((c, i) => {
-                    const st = STATUS_MAP[c.status] || { label: c.status, color: 'text-zinc-400 bg-zinc-800 border-zinc-700' };
+                    const st = STATUS_MAP[c.status] || { label: c.status, color: 'text-muted-foreground bg-muted border-zinc-700' };
                     return (
-                      <tr key={c.id || i} className="hover:bg-[#111823]/50 transition-colors">
-                        <td className="p-4 text-zinc-200 font-medium">{c.fullName}</td>
-                        <td className="p-4 font-mono text-zinc-400">
+                      <tr key={c.id || i} className="hover:bg-surface/50 transition-colors">
+                        <td className="p-4 text-foreground font-medium">{c.fullName}</td>
+                        <td className="p-4 font-mono text-muted-foreground">
                           <a href={`tel:${c.phone}`} className="hover:text-[#3b82f6] transition-colors flex items-center gap-1.5">
                             <Phone size={11} /> {c.phone}
                           </a>
                         </td>
-                        <td className="p-4 text-zinc-500 hidden md:table-cell">
+                        <td className="p-4 text-muted-foreground hidden md:table-cell">
                           <div className="flex items-center gap-1.5">
                             {c.company && <Building size={11} />} {c.company || '—'}
                           </div>
@@ -135,7 +135,7 @@ export default function ContactsPage() {
                           {c.campaignId ? (
                             <Link
                               href={`/campaigns/${c.campaignId}`}
-                              className="text-zinc-400 hover:text-[#3b82f6] text-[11px] font-mono underline-offset-2 hover:underline transition-colors"
+                              className="text-muted-foreground hover:text-[#3b82f6] text-[11px] font-mono underline-offset-2 hover:underline transition-colors"
                             >
                               {c.campaignId}
                             </Link>
@@ -153,3 +153,4 @@ export default function ContactsPage() {
     </div>
   );
 }
+
