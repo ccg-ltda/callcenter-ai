@@ -21,6 +21,7 @@ export default function CampaignsPage() {
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [finishing, setFinishing] = useState<string | null>(null);
 
   const loadCampaigns = async () => {
     try {
@@ -68,6 +69,31 @@ export default function CampaignsPage() {
       alert(error instanceof Error ? error.message : 'Error al eliminar la campaña');
     } finally {
       setDeleting(null);
+    }
+  };
+
+  const handleFinish = async (id: string, name: string) => {
+    const confirmed = window.confirm(
+      `¿Finalizar la campaña "${name}"? Podrás volver a iniciarla después.`
+    );
+    if (!confirmed) return;
+
+    setFinishing(id);
+    try {
+      const response = await fetch(`/api/campaigns/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'finished', finishedAt: new Date().toISOString() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo finalizar la campaña.');
+      setCampaigns((current) => current.map((campaign) =>
+        campaign.id === id ? data.campaign : campaign
+      ));
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'No se pudo finalizar la campaña.');
+    } finally {
+      setFinishing(null);
     }
   };
 
@@ -204,6 +230,29 @@ export default function CampaignsPage() {
                             <Rocket size={14} />
                           )}
                           Lanzar
+                        </Button>
+                      )}
+                      {camp.status === 'finished' && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleLaunch(camp.id)}
+                          disabled={launching === camp.id}
+                          className="flex items-center gap-1.5"
+                        >
+                          {launching === camp.id ? <Loader2 className="animate-spin" size={14} /> : <Rocket size={14} />}
+                          Iniciar nuevamente
+                        </Button>
+                      )}
+                      {camp.status === 'active' && (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => handleFinish(camp.id, camp.name)}
+                          disabled={finishing === camp.id}
+                          className="flex items-center gap-1.5"
+                        >
+                          {finishing === camp.id ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle2 size={14} />}
+                          Finalizar
                         </Button>
                       )}
                     </div>

@@ -32,6 +32,7 @@ export default function CampaignDetailPage() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState(false);
+  const [finishing, setFinishing] = useState(false);
   const [correctingContactId, setCorrectingContactId] = useState<string | null>(null);
   const [showImporter, setShowImporter] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -72,6 +73,29 @@ export default function CampaignDetailPage() {
   const handleImportComplete = (count: number) => {
     setShowImporter(false);
     loadData(); // Reload contacts
+  };
+
+  const handleFinish = async () => {
+    const confirmed = window.confirm(
+      '¿Finalizar esta campaña? Las llamadas ya iniciadas no se interrumpirán y podrás volver a iniciarla después.'
+    );
+    if (!confirmed) return;
+
+    setFinishing(true);
+    try {
+      const response = await fetch(`/api/campaigns/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'finished', finishedAt: new Date().toISOString() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo finalizar la campaña.');
+      setCampaign(data.campaign);
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'No se pudo finalizar la campaña.');
+    } finally {
+      setFinishing(false);
+    }
   };
 
   const handleCorrectPhone = async (contact: any) => {
@@ -146,6 +170,18 @@ export default function CampaignDetailPage() {
             <Button onClick={handleLaunch} disabled={launching} className="flex items-center gap-2">
               {launching ? <Loader2 className="animate-spin" size={16} /> : <Rocket size={16} />}
               Lanzar Campaña
+            </Button>
+          )}
+          {campaign.status === 'finished' && contacts.length > 0 && (
+            <Button onClick={handleLaunch} disabled={launching} className="flex items-center gap-2">
+              {launching ? <Loader2 className="animate-spin" size={16} /> : <Rocket size={16} />}
+              Iniciar nuevamente
+            </Button>
+          )}
+          {campaign.status === 'active' && (
+            <Button onClick={handleFinish} disabled={finishing} variant="danger" className="flex items-center gap-2">
+              {finishing ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
+              Finalizar campaña
             </Button>
           )}
           {failedContacts.length > 0 && (

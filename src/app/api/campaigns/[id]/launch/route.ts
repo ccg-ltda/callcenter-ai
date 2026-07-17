@@ -39,7 +39,11 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       await supabase.from('agents').update({ telnyx_assistant_id: assistantId }).eq('id', campaign.agent_id);
     }
 
-    await supabase.from('campaigns').update({ status: 'active', launched_at: new Date().toISOString() }).eq('id', id);
+    await supabase.from('campaigns').update({
+      status: 'active',
+      launched_at: new Date().toISOString(),
+      finished_at: null,
+    }).eq('id', id);
     const { data: contacts, error } = await supabase.from('contacts').select('*').eq('campaign_id', id).in('status', ['pending', 'failed']).limit(10);
     if (error) throw error;
     let callsQueued = 0;
