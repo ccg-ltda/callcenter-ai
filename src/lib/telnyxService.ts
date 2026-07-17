@@ -1,4 +1,5 @@
 import Telnyx from 'telnyx';
+import { normalizePhoneNumber, validatePhoneNumber } from '@/lib/phoneNumbers';
 
 const apiKey = process.env.TELNYX_API_KEY || '';
 const isMock = process.env.NEXT_PUBLIC_USE_MOCK_SERVICES === 'true' || !apiKey;
@@ -17,10 +18,6 @@ function normalizeVoice(voice: string) {
     telnyx_voice_en_male_1: 'Azure.en-US-BrianMultilingualNeural',
   };
   return legacyVoices[voice] || voice;
-}
-
-function normalizePhoneNumber(value: string) {
-  return value.trim().replace(/[\s().-]/g, '');
 }
 
 // Initialize Telnyx client if not in mock mode
@@ -302,10 +299,11 @@ export const telnyxService = {
     }
 
     try {
-      const toNumber = normalizePhoneNumber(contact.phone);
+      const destination = validatePhoneNumber(contact.phone);
+      const toNumber = destination.normalized;
       const fromPhoneNumber = normalizePhoneNumber(fromNumber);
-      if (!/^\+[1-9]\d{7,14}$/.test(toNumber)) {
-        throw new Error('El número de destino debe incluir el código de país, por ejemplo +573001234567.');
+      if (!destination.valid) {
+        throw new Error(destination.error || 'El número de destino no es válido.');
       }
       if (!/^\+[1-9]\d{7,14}$/.test(fromPhoneNumber)) {
         throw new Error('No hay un número Telnyx válido configurado como línea saliente.');

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRows } from '@/lib/server/supabaseRows';
+import { validatePhoneNumber } from '@/lib/phoneNumbers';
 
 type ImportedContact = { fullName?: string; nombre?: string; name?: string; phone?: string; telefono?: string; tel?: string; company?: string; empresa?: string; customFields?: unknown };
 
@@ -20,12 +21,16 @@ export async function POST(request: Request) {
     const campaignId = body.campaignId as string;
     const list = body.contacts as ImportedContact[];
     if (!campaignId || !Array.isArray(list) || !list.length) return NextResponse.json({ error: 'Faltan campaignId o contacts[].' }, { status: 400 });
-    const values = list.map((contact, index) => ({
-      id: `c_${Date.now()}_${index}`, campaign_id: campaignId,
-      full_name: contact.fullName || contact.nombre || contact.name || 'Sin nombre',
-      phone: contact.phone || contact.telefono || contact.tel || '', company: contact.company || contact.empresa || null,
-      custom_fields: contact.customFields || null, status: 'pending',
-    })).filter((contact) => contact.phone);
+    const values = list.map((contact, index) => {
+      const phone = validatePhoneNumber(contact.phone || contact.telefono || contact.tel || '');
+      if (!phone.valid) return null;
+      return {
+        id: `c_${Date.now()}_${index}`, campaign_id: campaignId,
+        full_name: contact.fullName || contact.nombre || contact.name || 'Sin nombre',
+        phone: phone.normalized, company: contact.company || contact.empresa || null,
+        custom_fields: contact.customFields || null, status: 'pending',
+      };
+    }).filter((contact): contact is NonNullable<typeof contact> => contact !== null);
     if (!values.length) return NextResponse.json({ error: 'Ningún contacto tiene teléfono válido.' }, { status: 400 });
     if (useMockServices) return NextResponse.json({ success: true, imported: values.length, failed: list.length - values.length, contacts: camelizeRows(values) });
     const supabase = getSupabaseAdmin()!;

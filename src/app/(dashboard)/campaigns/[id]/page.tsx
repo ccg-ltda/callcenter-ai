@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   ArrowLeft, Rocket, Users, PhoneCall, CalendarCheck, DollarSign,
-  Upload, Loader2, PauseCircle, CheckCircle2, Clock, Bot
+  Upload, Loader2, PauseCircle, CheckCircle2, Clock, Pencil, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@/components/ui';
 import CSVImporter from '@/components/CSVImporter';
@@ -32,6 +32,7 @@ export default function CampaignDetailPage() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState(false);
+  const [correctingContactId, setCorrectingContactId] = useState<string | null>(null);
   const [showImporter, setShowImporter] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
@@ -73,6 +74,31 @@ export default function CampaignDetailPage() {
     loadData(); // Reload contacts
   };
 
+  const handleCorrectPhone = async (contact: any) => {
+    const phone = window.prompt(
+      `Corrige el teléfono de ${contact.fullName}. Incluye el código de país:`,
+      contact.phone,
+    );
+    if (!phone || phone === contact.phone) return;
+
+    setCorrectingContactId(contact.id);
+    try {
+      const response = await fetch(`/api/contacts/${contact.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'No se pudo corregir el teléfono.');
+      await loadData();
+      alert('Teléfono actualizado. El contacto volvió a estado Pendiente.');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'No se pudo corregir el teléfono.');
+    } finally {
+      setCorrectingContactId(null);
+    }
+  };
+
   if (loading) return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Loader2 className="animate-spin text-[#3b82f6]" size={36} />
@@ -91,6 +117,7 @@ export default function CampaignDetailPage() {
   const contactRate = campaign.totalContacts > 0
     ? Math.round((campaign.callsMade / campaign.totalContacts) * 100)
     : 0;
+  const failedContacts = contacts.filter((contact) => contact.status === 'failed');
 
   return (
     <div className="space-y-8">
@@ -114,12 +141,20 @@ export default function CampaignDetailPage() {
           </div>
         </div>
 
-        {(campaign.status === 'draft' || campaign.status === 'paused') && contacts.length > 0 && (
-          <Button onClick={handleLaunch} disabled={launching} className="flex items-center gap-2">
-            {launching ? <Loader2 className="animate-spin" size={16} /> : <Rocket size={16} />}
-            Lanzar Campaña
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {(campaign.status === 'draft' || campaign.status === 'paused') && contacts.length > 0 && (
+            <Button onClick={handleLaunch} disabled={launching} className="flex items-center gap-2">
+              {launching ? <Loader2 className="animate-spin" size={16} /> : <Rocket size={16} />}
+              Lanzar Campaña
+            </Button>
+          )}
+          {failedContacts.length > 0 && (
+            <Button onClick={handleLaunch} disabled={launching} variant="outline" className="flex items-center gap-2">
+              {launching ? <Loader2 className="animate-spin" size={16} /> : <RefreshCw size={16} />}
+              Reintentar errores ({failedContacts.length})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -221,6 +256,7 @@ export default function CampaignDetailPage() {
                     <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider hidden sm:table-cell">Teléfono</th>
                     <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider hidden md:table-cell">Empresa</th>
                     <th className="text-left p-3 text-muted-foreground font-semibold uppercase tracking-wider">Estado</th>
+                    <th className="text-right p-3 text-muted-foreground font-semibold uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -235,6 +271,31 @@ export default function CampaignDetailPage() {
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${st.color}`}>
                             {st.label}
                           </span>
+                          {c.status === 'failed' && c.customFields?.callError && (
+                            <p className="mt-1.5 max-w-xs text-[10px] leading-relaxed text-red-400 flex items-start gap-1">
+                              <AlertCircle size={11} className="mt-0.5 shrink-0" />
+                              {c.customFields.callError}
+                            </p>
+                          )}
+                        </td>
+                        <td className="p-3 text-right">
+                          {c.status === 'failed' && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCorrectPhone(c)}
+                              disabled={correctingContactId === c.id}
+                              className="inline-flex items-center gap-1.5"
+                            >
+                              {correctingContactId === c.id ? (
+                                <Loader2 className="animate-spin" size={12} />
+                              ) : (
+                                <Pencil size={12} />
+                              )}
+                              Corregir teléfono
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );

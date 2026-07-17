@@ -20,18 +20,30 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       supabase.from('settings').select('*').eq('id', 'default').maybeSingle(),
     ]);
     if (!campaign) return NextResponse.json({ error: 'Campaña no encontrada.' }, { status: 404 });
-    if (campaign.status === 'active') return NextResponse.json({ error: 'La campaña ya está activa.' }, { status: 400 });
     const start = settings?.call_window_start || '10:00'; const end = settings?.call_window_end || '18:00'; const timezone = settings?.timezone || 'America/Bogota';
     if (!isWithinCallWindow(start, end, timezone)) return NextResponse.json({ error: `Fuera de la ventana permitida (${start}–${end}, ${timezone}).` }, { status: 403 });
     if (!settings?.telnyx_phone_number) return NextResponse.json({ error: 'Configura primero el número Telnyx.' }, { status: 400 });
-    const { data: agent } = campaign.agent_id ? await supabase.from('agents').select('telnyx_assistant_id').eq('id', campaign.agent_id).maybeSingle() : { data: null };
-    const assistantId = agent?.telnyx_assistant_id || settings.telnyx_assistant_id;
+    const { data: agent } = campaign.agent_id
+      ? await supabase.from('agents').select('name, voice, script, goal, telnyx_assistant_id').eq('id', campaign.agent_id).maybeSingle()
+      : { data: null };
+    let assistantId = agent?.telnyx_assistant_id || settings.telnyx_assistant_id;
     if (!assistantId) return NextResponse.json({ error: 'La campaña no tiene un asistente Telnyx configurado.' }, { status: 400 });
+    if (agent && !telnyxService.isRealAssistantId(assistantId)) {
+      const assistant = await telnyxService.createAssistant({
+        name: agent.name,
+        voice: agent.voice,
+        script: agent.script,
+        goal: agent.goal,
+      });
+      assistantId = assistant.id;
+      await supabase.from('agents').update({ telnyx_assistant_id: assistantId }).eq('id', campaign.agent_id);
+    }
 
     await supabase.from('campaigns').update({ status: 'active', launched_at: new Date().toISOString() }).eq('id', id);
-    const { data: contacts, error } = await supabase.from('contacts').select('*').eq('campaign_id', id).eq('status', 'pending').limit(10);
+    const { data: contacts, error } = await supabase.from('contacts').select('*').eq('campaign_id', id).in('status', ['pending', 'failed']).limit(10);
     if (error) throw error;
     let callsQueued = 0;
+    const failedCalls: Array<{ contactId: string; name: string; error: string }> = [];
     for (const contact of contacts || []) {
       try {
         const result = await telnyxService.startCall({ phone: contact.phone, fullName: contact.full_name }, assistantId, settings.telnyx_phone_number);
@@ -42,10 +54,21 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         }
       } catch (error) {
         console.error(`[Campaign] Contact ${contact.id} failed`, error);
-        await supabase.from('contacts').update({ status: 'failed' }).eq('id', contact.id);
+        const message = error instanceof Error ? error.message : 'Telnyx rechazó la llamada.';
+        const customFields = contact.custom_fields && typeof contact.custom_fields === 'object'
+          ? { ...contact.custom_fields, callError: message }
+          : { callError: message };
+        await supabase.from('contacts').update({ status: 'failed', custom_fields: customFields }).eq('id', contact.id);
+        failedCalls.push({ contactId: contact.id, name: contact.full_name, error: message });
       }
     }
-    return NextResponse.json({ success: true, message: `Campaña lanzada. ${callsQueued} llamadas en cola.`, callsQueued });
+    const failedMessage = failedCalls.length ? ` ${failedCalls.length} contacto(s) con error; revisa el detalle.` : '';
+    return NextResponse.json({
+      success: true,
+      message: `Campaña procesada. ${callsQueued} llamadas en cola.${failedMessage}`,
+      callsQueued,
+      failedCalls,
+    });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Error al lanzar campaña.' }, { status: 500 });
   }

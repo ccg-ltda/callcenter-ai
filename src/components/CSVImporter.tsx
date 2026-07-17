@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui';
+import { validatePhoneNumber } from '@/lib/phoneNumbers';
 
 interface ParsedContact {
   fullName: string;
@@ -18,11 +19,9 @@ interface CSVImporterProps {
 }
 
 function parsePhoneNumber(phone: string): { valid: boolean; formatted: string } {
-  const cleaned = phone.replace(/[\s\-\(\)\.]/g, '');
-  // Basic validation: must start with + or digit, and be between 7-15 digits
-  const valid = /^\+?[1-9]\d{6,14}$/.test(cleaned);
-  const formatted = cleaned.startsWith('+') ? cleaned : `+${cleaned}`;
-  return { valid, formatted };
+  const withCountryPrefix = phone.trim().startsWith('+') ? phone : `+${phone}`;
+  const result = validatePhoneNumber(withCountryPrefix);
+  return { valid: result.valid, formatted: result.normalized };
 }
 
 function parseCSV(text: string): ParsedContact[] {
