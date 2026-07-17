@@ -19,6 +19,10 @@ function normalizeVoice(voice: string) {
   return legacyVoices[voice] || voice;
 }
 
+function normalizePhoneNumber(value: string) {
+  return value.trim().replace(/[\s().-]/g, '');
+}
+
 // Initialize Telnyx client if not in mock mode
 let telnyxClient: any = null;
 if (!isMock) {
@@ -298,10 +302,12 @@ export const telnyxService = {
     }
 
     try {
-      if (!/^\+[1-9]\d{7,14}$/.test(contact.phone)) {
+      const toNumber = normalizePhoneNumber(contact.phone);
+      const fromPhoneNumber = normalizePhoneNumber(fromNumber);
+      if (!/^\+[1-9]\d{7,14}$/.test(toNumber)) {
         throw new Error('El número de destino debe incluir el código de país, por ejemplo +573001234567.');
       }
-      if (!/^\+[1-9]\d{7,14}$/.test(fromNumber)) {
+      if (!/^\+[1-9]\d{7,14}$/.test(fromPhoneNumber)) {
         throw new Error('No hay un número Telnyx válido configurado como línea saliente.');
       }
       if (!isRealAssistantId(assistantId)) {
@@ -316,8 +322,8 @@ export const telnyxService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          To: contact.phone,
-          From: fromNumber,
+          To: toNumber,
+          From: fromPhoneNumber,
           AIAssistantId: assistantId,
           AIAssistantDynamicVariables: {
             full_name: contact.fullName,

@@ -267,7 +267,7 @@ export default function AgentsPage() {
                 <div className="flex items-start gap-2 text-muted-foreground text-[11px] leading-relaxed py-1">
                   <AlertCircle size={14} className="shrink-0 mt-0.5 text-[#3b82f6]" />
                   <span>
-                    El número de destino debe incluir el código de país. En modo simulación, 
+                    El número de destino debe incluir el código de país; puede contener espacios, guiones o paréntesis. En modo simulación, 
                     se simularán los webhooks y las grabaciones en el dashboard sin consumir saldo de Telnyx.
                   </span>
                 </div>
