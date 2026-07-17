@@ -29,7 +29,11 @@ import {
   Select,
   Textarea
 } from '@/components/ui';
-import { PHONE_NUMBER_ADMINISTRATIVE_AREAS, PHONE_NUMBER_COUNTRIES } from '@/lib/phoneNumberLocations';
+import {
+  AvailablePhoneNumber,
+  PHONE_NUMBER_ADMINISTRATIVE_AREAS,
+  PHONE_NUMBER_COUNTRIES,
+} from '@/lib/phoneNumberLocations';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -43,7 +47,7 @@ export default function OnboardingPage() {
   const [searchCountry, setSearchCountry] = useState('US');
   const [searchAdministrativeArea, setSearchAdministrativeArea] = useState('FL');
   const [searchCity, setSearchCity] = useState('Miami');
-  const [numbersList, setNumbersList] = useState<any[]>([]);
+  const [numbersList, setNumbersList] = useState<AvailablePhoneNumber[]>([]);
   const [selectedNumber, setSelectedNumber] = useState('');
   const [searchingNumbers, setSearchingNumbers] = useState(false);
   const [buyingNumber, setBuyingNumber] = useState(false);
@@ -80,9 +84,8 @@ export default function OnboardingPage() {
       if (!res.ok) throw new Error('Error al buscar números');
       const data = await res.json();
       setNumbersList(data);
-      if (data.length > 0) {
-        setSelectedNumber(data[0].phoneNumber);
-      }
+      const firstPurchasableNumber = data.find((number: AvailablePhoneNumber) => number.isPurchasable);
+      setSelectedNumber(firstPurchasableNumber?.phoneNumber || '');
     } catch (error) {
       console.error(error);
       alert('Error buscando números.');
@@ -343,12 +346,28 @@ export default function OnboardingPage() {
 
                 {numbersList.length > 0 && (
                   <div className="space-y-2 mt-4">
+                    {numbersList.some((number) => !number.isPurchasable) && (
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-muted-foreground">
+                        <p className="font-semibold text-foreground">Telnyx está ocultando los números de esta cuenta.</p>
+                        <p className="mt-1">Agrega un método de pago y completa la verificación para poder comprarlos.</p>
+                        <a
+                          href="https://portal.telnyx.com/#/account/account-levels"
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 inline-flex font-semibold text-[#3b82f6] hover:underline"
+                        >
+                          Verificar cuenta en Telnyx
+                        </a>
+                      </div>
+                    )}
                     <Label>Números Encontrados</Label>
                     <div className="border border-border rounded-lg divide-y divide-border/50 bg-background/50 max-h-[180px] overflow-y-auto">
                       {numbersList.map((num) => (
                         <label 
                           key={num.phoneNumber} 
-                          className={`flex items-center justify-between p-3 cursor-pointer hover:bg-surface/60 transition-colors ${
+                          className={`flex items-center justify-between p-3 transition-colors ${
+                            num.isPurchasable ? 'cursor-pointer hover:bg-surface/60' : 'cursor-not-allowed opacity-60'
+                          } ${
                             selectedNumber === num.phoneNumber ? 'bg-[#3b82f6]/5 border-l-2 border-[#3b82f6]' : ''
                           }`}
                         >
@@ -358,6 +377,7 @@ export default function OnboardingPage() {
                               name="selected_number"
                               checked={selectedNumber === num.phoneNumber}
                               onChange={() => setSelectedNumber(num.phoneNumber)}
+                              disabled={!num.isPurchasable}
                               className="accent-[#3b82f6]"
                             />
                             <span className="font-mono text-sm font-semibold">{num.phoneNumber}</span>

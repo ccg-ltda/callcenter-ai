@@ -3,6 +3,14 @@ export interface LocationOption {
   label: string;
 }
 
+export interface AvailablePhoneNumber {
+  phoneNumber: string;
+  type: string;
+  priceMonthly: string;
+  provider: string;
+  isPurchasable: boolean;
+}
+
 export const PHONE_NUMBER_COUNTRIES: LocationOption[] = [
   { value: 'CO', label: 'Colombia (CO)' },
   { value: 'US', label: 'Estados Unidos (US)' },

@@ -50,10 +50,10 @@ export const telnyxService = {
       // Simulate API lag
       await new Promise(resolve => setTimeout(resolve, 500));
       return [
-        { phoneNumber: `+13055550112`, type: 'local', priceMonthly: '2.00', provider: 'Telnyx' },
-        { phoneNumber: `+13055550185`, type: 'local', priceMonthly: '2.00', provider: 'Telnyx' },
-        { phoneNumber: `+13055550293`, type: 'toll-free', priceMonthly: '5.00', provider: 'Telnyx' },
-        { phoneNumber: `+13055550341`, type: 'local', priceMonthly: '2.00', provider: 'Telnyx' },
+        { phoneNumber: `+13055550112`, type: 'local', priceMonthly: '2.00', provider: 'Telnyx', isPurchasable: true },
+        { phoneNumber: `+13055550185`, type: 'local', priceMonthly: '2.00', provider: 'Telnyx', isPurchasable: true },
+        { phoneNumber: `+13055550293`, type: 'toll-free', priceMonthly: '5.00', provider: 'Telnyx', isPurchasable: true },
+        { phoneNumber: `+13055550341`, type: 'local', priceMonthly: '2.00', provider: 'Telnyx', isPurchasable: true },
       ];
     }
 
@@ -98,7 +98,10 @@ export const telnyxService = {
         phoneNumber: num.phone_number,
         type: num.number_type || 'local',
         priceMonthly: num.cost_information?.monthly_cost || num.cost_information?.upfront_cost || 'Consultar',
-        provider: 'Telnyx'
+        provider: 'Telnyx',
+        // Restricted Telnyx accounts receive masked values such as
+        // +15619------. Those are previews and cannot be ordered via API.
+        isPurchasable: /^\+[1-9]\d{7,14}$/.test(num.phone_number || ''),
       }));
     } catch (error) {
       console.error('Error searching Telnyx numbers:', error);

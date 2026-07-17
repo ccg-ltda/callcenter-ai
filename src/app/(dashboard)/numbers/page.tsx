@@ -23,7 +23,11 @@ import {
   Label, 
   Select 
 } from '@/components/ui';
-import { PHONE_NUMBER_ADMINISTRATIVE_AREAS, PHONE_NUMBER_COUNTRIES } from '@/lib/phoneNumberLocations';
+import {
+  AvailablePhoneNumber,
+  PHONE_NUMBER_ADMINISTRATIVE_AREAS,
+  PHONE_NUMBER_COUNTRIES,
+} from '@/lib/phoneNumberLocations';
 
 export default function NumbersPage() {
   const [loading, setLoading] = useState(true);
@@ -37,9 +41,10 @@ export default function NumbersPage() {
   const [searchCountry, setSearchCountry] = useState('CO');
   const [searchAdministrativeArea, setSearchAdministrativeArea] = useState('');
   const [searchCity, setSearchCity] = useState('');
-  const [availableNumbers, setAvailableNumbers] = useState<any[]>([]);
+  const [availableNumbers, setAvailableNumbers] = useState<AvailablePhoneNumber[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const hasMaskedNumbers = availableNumbers.some((number) => !number.isPurchasable);
 
   // Load current setting number
   const loadCurrentNumber = async () => {
@@ -277,42 +282,66 @@ export default function NumbersPage() {
                   </div>
                 </div>
               ) : (
-                <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/50 bg-background/30">
-                  {availableNumbers.map((num) => (
-                    <div 
-                      key={num.phoneNumber} 
-                      className="p-4 flex items-center justify-between hover:bg-surface/60 transition-colors"
-                    >
-                      <div className="space-y-1">
-                        <span className="font-mono text-base font-bold text-foreground block">{num.phoneNumber}</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground uppercase font-mono">{num.type}</span>
-                          <span className="text-[10px] text-[#3b82f6] font-mono font-semibold">{num.provider} Network</span>
+                <div className="space-y-4">
+                  {hasMaskedNumbers && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-foreground">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle size={18} className="mt-0.5 shrink-0 text-amber-400" />
+                        <div className="space-y-2">
+                          <p className="font-semibold">Telnyx está ocultando los números de esta cuenta</p>
+                          <p className="text-xs text-muted-foreground leading-relaxed">
+                            Los valores terminados en guiones son solo vistas previas y no se pueden comprar por API. Agrega un método de pago y completa la verificación de la cuenta para ver números completos.
+                          </p>
+                          <a
+                            href="https://portal.telnyx.com/#/account/account-levels"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex text-xs font-semibold text-[#3b82f6] hover:underline"
+                          >
+                            Verificar cuenta en Telnyx
+                          </a>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <span className="text-sm font-bold text-foreground font-mono block">${num.priceMonthly}</span>
-                          <span className="text-[10px] text-muted-foreground block">Facturación mensual</span>
-                        </div>
-                        <Button 
-                          onClick={() => handleBuy(num.phoneNumber)} 
-                          disabled={buying}
-                          className="flex items-center gap-1.5 h-9"
-                          size="sm"
-                        >
-                          {buying ? (
-                            <Loader2 className="animate-spin" size={14} />
-                          ) : (
-                            <>
-                              <ShoppingCart size={14} />
-                              Comprar
-                            </>
-                          )}
-                        </Button>
                       </div>
                     </div>
-                  ))}
+                  )}
+
+                  <div className="border border-border rounded-xl overflow-hidden divide-y divide-border/50 bg-background/30">
+                    {availableNumbers.map((num) => (
+                      <div 
+                        key={num.phoneNumber} 
+                        className="p-4 flex items-center justify-between hover:bg-surface/60 transition-colors"
+                      >
+                        <div className="space-y-1">
+                          <span className="font-mono text-base font-bold text-foreground block">{num.phoneNumber}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground uppercase font-mono">{num.type}</span>
+                            <span className="text-[10px] text-[#3b82f6] font-mono font-semibold">{num.provider} Network</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <span className="text-sm font-bold text-foreground font-mono block">${num.priceMonthly}</span>
+                            <span className="text-[10px] text-muted-foreground block">Facturación mensual</span>
+                          </div>
+                          <Button 
+                            onClick={() => handleBuy(num.phoneNumber)} 
+                            disabled={buying || !num.isPurchasable}
+                            className="flex items-center gap-1.5 h-9"
+                            size="sm"
+                          >
+                            {buying ? (
+                              <Loader2 className="animate-spin" size={14} />
+                            ) : (
+                              <>
+                                <ShoppingCart size={14} />
+                                {num.isPurchasable ? 'Comprar' : 'No disponible'}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
