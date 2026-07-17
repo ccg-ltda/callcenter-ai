@@ -63,6 +63,14 @@ export const telnyxService = {
         'filter[limit]': '10',
       });
       if (city.trim()) params.set('filter[locality]', city.trim());
+
+      // Telnyx only supports best-effort searches for US and Canada. Without
+      // this flag it returns a 400 when a locality has no exact inventory,
+      // even though nearby numbers may be available.
+      if (['US', 'CA'].includes(countryCode.toUpperCase())) {
+        params.set('filter[best_effort]', 'true');
+      }
+
       const url = `https://api.telnyx.com/v2/available_phone_numbers?${params}`;
       const response = await fetch(url, {
         headers: {
@@ -72,7 +80,13 @@ export const telnyxService = {
       });
       
       if (!response.ok) {
-        throw new Error(await telnyxService.readErrorDetails(response));
+        const details = await telnyxService.readErrorDetails(response);
+
+        // An empty inventory is a valid search result, not an application
+        // failure. Return an empty list so the UI can explain it clearly.
+        if (/no numbers found/i.test(details)) return [];
+
+        throw new Error(details);
       }
       
       const data = await response.json();

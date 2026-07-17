@@ -36,6 +36,8 @@ export default function NumbersPage() {
   const [searchCountry, setSearchCountry] = useState('CO');
   const [searchCity, setSearchCity] = useState('');
   const [availableNumbers, setAvailableNumbers] = useState<any[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   // Load current setting number
   const loadCurrentNumber = async () => {
@@ -60,13 +62,20 @@ export default function NumbersPage() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setSearching(true);
+    setHasSearched(true);
+    setSearchError('');
+    setAvailableNumbers([]);
     try {
-      const res = await fetch(`/api/telnyx/numbers?country=${searchCountry}&city=${searchCity}`);
+      const query = new URLSearchParams({
+        country: searchCountry,
+        city: searchCity.trim(),
+      });
+      const res = await fetch(`/api/telnyx/numbers?${query}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al buscar números');
       setAvailableNumbers(data || []);
-    } catch (error: any) {
-      alert(error.message || 'Error al buscar números');
+    } catch (error: unknown) {
+      setSearchError(error instanceof Error ? error.message : 'No se pudo completar la búsqueda. Intenta de nuevo.');
     } finally {
       setSearching(false);
     }
@@ -226,15 +235,29 @@ export default function NumbersPage() {
               <CardDescription>Selecciona un número de la red para comprarlo.</CardDescription>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col justify-between">
-              {availableNumbers.length === 0 ? (
+              {searchError ? (
+                <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-red-500/10 text-red-400 flex items-center justify-center">
+                    <AlertCircle size={22} />
+                  </div>
+                  <div className="max-w-sm space-y-1">
+                    <h4 className="font-semibold text-foreground text-sm">No pudimos buscar números</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{searchError}</p>
+                  </div>
+                </div>
+              ) : availableNumbers.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
                   <div className="h-12 w-12 rounded-full bg-muted/40 text-muted-foreground flex items-center justify-center">
                     <Search size={22} />
                   </div>
                   <div className="max-w-xs space-y-1">
-                    <h4 className="font-semibold text-muted-foreground text-sm">Realiza una búsqueda</h4>
+                    <h4 className="font-semibold text-muted-foreground text-sm">
+                      {hasSearched ? 'No encontramos números disponibles' : 'Realiza una búsqueda'}
+                    </h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Elige el país y localidad en la izquierda para buscar y comprar nuevos números.
+                      {hasSearched
+                        ? 'Prueba con otra ciudad o deja la localidad vacía para ampliar la búsqueda.'
+                        : 'Elige el país y localidad en la izquierda para buscar y comprar nuevos números.'}
                     </p>
                   </div>
                 </div>
