@@ -94,11 +94,11 @@ export default function AgentsPage() {
           script: agentScript,
           goal: agentGoal,
           meetingDurationMin: Number(meetingDuration),
-          telnyxAssistantId: 'telnyx_asst_' + Math.floor(Math.random() * 1000)
         }),
       });
 
-      if (!res.ok) throw new Error('Error al guardar el agente');
+      const data = await res.json().catch(() => null);
+      if (!res.ok) throw new Error(data?.error || 'Error al guardar el agente');
       alert('Agente guardado exitosamente');
       
       // Reset form
@@ -151,8 +151,8 @@ export default function AgentsPage() {
         }),
       });
 
-      if (!res.ok) throw new Error('Error al iniciar la llamada');
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al iniciar la llamada');
       alert(`Llamada iniciada con éxito. ${data.message}`);
     } catch (error: any) {
       alert(error.message || 'Error al disparar llamada');

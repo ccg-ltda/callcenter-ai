@@ -10,12 +10,25 @@ export async function POST(request: Request) {
     if (!useMockServices) {
       const supabase = getSupabaseAdmin()!;
       const [{ data: agent }, { data: settings }] = await Promise.all([
-        supabase.from('agents').select('telnyx_assistant_id').eq('id', agentId).maybeSingle(),
+        supabase.from('agents').select('name, voice, script, goal, telnyx_assistant_id').eq('id', agentId).maybeSingle(),
         supabase.from('settings').select('telnyx_phone_number, telnyx_assistant_id').eq('id', 'default').maybeSingle(),
       ]);
       if (!agent) return NextResponse.json({ error: 'Agente no encontrado.' }, { status: 404 });
+      if (!settings?.telnyx_phone_number) {
+        return NextResponse.json({ error: 'Primero configura un número Telnyx como línea saliente.' }, { status: 400 });
+      }
       fromNumber = settings?.telnyx_phone_number || fromNumber;
-      assistantId = agent.telnyx_assistant_id || settings?.telnyx_assistant_id || assistantId;
+      assistantId = agent.telnyx_assistant_id || settings?.telnyx_assistant_id || '';
+      if (!telnyxService.isRealAssistantId(assistantId)) {
+        const assistant = await telnyxService.createAssistant({
+          name: agent.name,
+          voice: agent.voice,
+          script: agent.script,
+          goal: agent.goal,
+        });
+        assistantId = assistant.id;
+        await supabase.from('agents').update({ telnyx_assistant_id: assistantId }).eq('id', agentId);
+      }
     }
     const result = await telnyxService.startCall({ phone: phoneNumber, fullName: 'Usuario de prueba' }, assistantId, fromNumber);
     if (!useMockServices && result.success) {

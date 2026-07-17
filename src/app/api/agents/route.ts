@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRow, camelizeRows } from '@/lib/server/supabaseRows';
+import { telnyxService } from '@/lib/telnyxService';
 
 export async function GET() {
   if (useMockServices) return NextResponse.json([]);
@@ -12,12 +13,22 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { id, name, voice, script, goal, meetingDurationMin, telnyxAssistantId } = body;
+    const { id, name, voice, script, goal, meetingDurationMin } = body;
     if (!id || !name || !voice || !script) return NextResponse.json({ error: 'Faltan campos requeridos.' }, { status: 400 });
     if (useMockServices) return NextResponse.json({ success: true, agent: body });
-    const { data, error } = await getSupabaseAdmin()!.from('agents').upsert({
+    const supabase = getSupabaseAdmin()!;
+    const { data: existingAgent } = await supabase
+      .from('agents')
+      .select('telnyx_assistant_id')
+      .eq('id', id)
+      .maybeSingle();
+    const assistant = await telnyxService.createAssistant(
+      { name, voice, script, goal },
+      existingAgent?.telnyx_assistant_id,
+    );
+    const { data, error } = await supabase.from('agents').upsert({
       id, name, voice, script, goal: goal || 'agendar_reunion', meeting_duration_min: meetingDurationMin || 15,
-      telnyx_assistant_id: telnyxAssistantId || null,
+      telnyx_assistant_id: assistant.id,
     }).select().single();
     if (error) throw error;
     return NextResponse.json({ success: true, agent: camelizeRow(data) });
