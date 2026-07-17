@@ -28,13 +28,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       : { data: null };
     let assistantId = agent?.telnyx_assistant_id || settings.telnyx_assistant_id;
     if (!assistantId) return NextResponse.json({ error: 'La campaña no tiene un asistente Telnyx configurado.' }, { status: 400 });
-    if (agent && !telnyxService.isRealAssistantId(assistantId)) {
+    if (agent) {
       const assistant = await telnyxService.createAssistant({
         name: agent.name,
         voice: agent.voice,
         script: agent.script,
         goal: agent.goal,
-      });
+      }, assistantId);
       assistantId = assistant.id;
       await supabase.from('agents').update({ telnyx_assistant_id: assistantId }).eq('id', campaign.agent_id);
     }

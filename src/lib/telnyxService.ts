@@ -5,6 +5,20 @@ const apiKey = process.env.TELNYX_API_KEY || '';
 const isMock = process.env.NEXT_PUBLIC_USE_MOCK_SERVICES === 'true' || !apiKey;
 const connectionId = process.env.TELNYX_CONNECTION_ID || '';
 const texmlApplicationName = 'Contact Center IA - Voice Agents';
+const assistantModel = process.env.TELNYX_ASSISTANT_MODEL || 'anthropic/claude-haiku-4-5';
+
+const conversationControlInstructions = `
+
+REGLAS DE CONVERSACIÓN TELEFÓNICA:
+- Escucha hasta que la persona termine su idea y responde de forma breve y natural.
+- Si la persona interrumpe, deja de hablar y atiende lo que está diciendo.
+- Si la persona indica claramente que quiere terminar la llamada, por ejemplo: "chao", "hasta luego", "adiós", "gracias, eso es todo", "no deseo continuar", "no estoy interesado" o una despedida equivalente, responde con una despedida amable de una sola frase y usa inmediatamente la herramienta para finalizar la llamada.
+- Después de una despedida no hagas más preguntas, no reinicies la conversación y no continúes hablando.
+`.trim();
+
+function buildAssistantInstructions(script: string) {
+  return `${script.trim()}\n\n${conversationControlInstructions}`;
+}
 
 function isRealAssistantId(value: string | null | undefined) {
   return Boolean(value && !value.startsWith('telnyx_asst_') && !value.startsWith('mock_'));
@@ -197,9 +211,35 @@ export const telnyxService = {
         },
         body: JSON.stringify({
           name: agentConfig.name,
-          instructions: agentConfig.script,
+          model: assistantModel,
+          instructions: buildAssistantInstructions(agentConfig.script),
           greeting: 'Hola, soy tu asistente virtual. ¿En qué puedo ayudarte?',
           enabled_features: ['telephony'],
+          tools: [
+            {
+              type: 'hangup',
+              hangup: {
+                description: 'Finaliza la llamada cuando la persona se despida, solicite terminar, diga que no desea continuar o cuando el objetivo de la conversación ya haya concluido. Antes de usarla, di una despedida amable de una sola frase.',
+              },
+            },
+          ],
+          transcription: {
+            model: 'azure/fast',
+            language: 'es-CO',
+            region: 'latency',
+          },
+          interruption_settings: {
+            enable: true,
+            disable_greeting_interruption: false,
+            start_speaking_plan: {
+              wait_seconds: 0.3,
+              transcription_endpointing_plan: {
+                on_punctuation_seconds: 0.1,
+                on_no_punctuation_seconds: 0.8,
+                on_number_seconds: 0.5,
+              },
+            },
+          },
           voice_settings: {
             voice: normalizeVoice(agentConfig.voice),
           },

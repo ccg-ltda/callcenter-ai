@@ -18,17 +18,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Primero configura un número Telnyx como línea saliente.' }, { status: 400 });
       }
       fromNumber = settings?.telnyx_phone_number || fromNumber;
-      assistantId = agent.telnyx_assistant_id || settings?.telnyx_assistant_id || '';
-      if (!telnyxService.isRealAssistantId(assistantId)) {
-        const assistant = await telnyxService.createAssistant({
-          name: agent.name,
-          voice: agent.voice,
-          script: agent.script,
-          goal: agent.goal,
-        });
-        assistantId = assistant.id;
-        await supabase.from('agents').update({ telnyx_assistant_id: assistantId }).eq('id', agentId);
-      }
+      const currentAssistantId = agent.telnyx_assistant_id || settings?.telnyx_assistant_id || '';
+      const assistant = await telnyxService.createAssistant({
+        name: agent.name,
+        voice: agent.voice,
+        script: agent.script,
+        goal: agent.goal,
+      }, currentAssistantId);
+      assistantId = assistant.id;
+      await supabase.from('agents').update({ telnyx_assistant_id: assistantId }).eq('id', agentId);
     }
     const result = await telnyxService.startCall({ phone: phoneNumber, fullName: 'Usuario de prueba' }, assistantId, fromNumber);
     if (!useMockServices && result.success) {
