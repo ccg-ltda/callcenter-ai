@@ -25,3 +25,31 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Error al actualizar campaña.' }, { status: 500 });
   }
 }
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    if (useMockServices) return NextResponse.json({ success: true, id });
+
+    const supabase = getSupabaseAdmin()!;
+    const { data: campaign, error: findError } = await supabase
+      .from('campaigns')
+      .select('id')
+      .eq('id', id)
+      .maybeSingle();
+    if (findError) throw findError;
+    if (!campaign) return NextResponse.json({ error: 'Campaña no encontrada.' }, { status: 404 });
+
+    // Preserve contacts, calls and metrics while removing their campaign link.
+    for (const table of ['contacts', 'calls', 'daily_metrics']) {
+      const { error } = await supabase.from(table).update({ campaign_id: null }).eq('campaign_id', id);
+      if (error) throw error;
+    }
+
+    const { error: deleteError } = await supabase.from('campaigns').delete().eq('id', id);
+    if (deleteError) throw deleteError;
+    return NextResponse.json({ success: true, id });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error al eliminar campaña.' }, { status: 500 });
+  }
+}

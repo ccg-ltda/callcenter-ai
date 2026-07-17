@@ -1,10 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Search, Phone, Calendar, Building, Loader2, Filter } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Input } from '@/components/ui';
+import { Users, Search, Phone, PhoneCall, Building, Loader2 } from 'lucide-react';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button, Input, Select } from '@/components/ui';
 import Link from 'next/link';
+
+interface Contact {
+  id: string;
+  fullName: string;
+  phone: string;
+  company?: string | null;
+  status: string;
+  campaignId?: string | null;
+}
+
+interface AgentOption {
+  id: string;
+  name: string;
+}
 
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending:   { label: 'Pendiente',  color: 'text-muted-foreground bg-muted border-zinc-700' },
@@ -16,18 +29,68 @@ const STATUS_MAP: Record<string, { label: string; color: string }> = {
 };
 
 export default function ContactsPage() {
-  const [contacts, setContacts] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
+  const [selectedAgentId, setSelectedAgentId] = useState('');
+  const [callingContactId, setCallingContactId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
   useEffect(() => {
-    fetch('/api/contacts')
-      .then(r => r.json())
-      .then(data => setContacts(Array.isArray(data) ? data : []))
-      .catch(console.error)
-      .finally(() => setLoading(false));
+    async function loadData() {
+      try {
+        const [contactsResponse, agentsResponse] = await Promise.all([
+          fetch('/api/contacts'),
+          fetch('/api/agents'),
+        ]);
+        const [contactsData, agentsData] = await Promise.all([
+          contactsResponse.json(),
+          agentsResponse.json(),
+        ]);
+        if (!contactsResponse.ok) throw new Error(contactsData.error || 'Error al cargar contactos');
+        if (!agentsResponse.ok) throw new Error(agentsData.error || 'Error al cargar agentes');
+        setContacts(Array.isArray(contactsData) ? contactsData : []);
+        setAgents(Array.isArray(agentsData) ? agentsData : []);
+        if (agentsData.length > 0) setSelectedAgentId(agentsData[0].id);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
   }, []);
+
+  const handleCall = async (contact: Contact) => {
+    if (!selectedAgentId) {
+      alert('Primero selecciona un agente para realizar la llamada.');
+      return;
+    }
+    const confirmed = window.confirm(
+      `¿Iniciar una llamada real a ${contact.fullName} (${contact.phone})? Esta llamada puede consumir saldo de Telnyx.`
+    );
+    if (!confirmed) return;
+
+    setCallingContactId(contact.id);
+    try {
+      const response = await fetch(`/api/contacts/${contact.id}/call`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: selectedAgentId }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Error al iniciar la llamada');
+      setContacts((current) => current.map((item) =>
+        item.id === contact.id ? { ...item, status: 'calling' } : item
+      ));
+      alert(data.message || 'Llamada iniciada.');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al iniciar la llamada');
+    } finally {
+      setCallingContactId(null);
+    }
+  };
 
   const filtered = contacts.filter(c => {
     const matchesSearch = !search || 
@@ -77,14 +140,26 @@ export default function ContactsPage() {
               <CardTitle>Todos los Contactos ({filtered.length})</CardTitle>
               <CardDescription>Para importar contactos, hazlo desde el detalle de cada campaña.</CardDescription>
             </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-              <Input
-                placeholder="Buscar nombre, teléfono..."
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="pl-9"
+            <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+              <Select
+                aria-label="Agente para llamadas"
+                value={selectedAgentId}
+                onChange={(event) => setSelectedAgentId(event.target.value)}
+                options={agents.length > 0
+                  ? agents.map((agent) => ({ value: agent.id, label: `Agente: ${agent.name}` }))
+                  : [{ value: '', label: 'No hay agentes disponibles' }]}
+                disabled={agents.length === 0}
+                className="sm:min-w-52"
               />
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
+                <Input
+                  placeholder="Buscar nombre, teléfono..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -108,6 +183,7 @@ export default function ContactsPage() {
                     <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider hidden md:table-cell">Empresa</th>
                     <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider">Estado</th>
                     <th className="text-left p-4 text-muted-foreground font-semibold uppercase tracking-wider hidden lg:table-cell">Campaña</th>
+                    <th className="text-right p-4 text-muted-foreground font-semibold uppercase tracking-wider">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -140,6 +216,22 @@ export default function ContactsPage() {
                               {c.campaignId}
                             </Link>
                           ) : '—'}
+                        </td>
+                        <td className="p-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCall(c)}
+                            disabled={!selectedAgentId || callingContactId !== null}
+                            className="inline-flex items-center gap-1.5"
+                          >
+                            {callingContactId === c.id ? (
+                              <Loader2 className="animate-spin" size={13} />
+                            ) : (
+                              <PhoneCall size={13} />
+                            )}
+                            Llamar
+                          </Button>
                         </td>
                       </tr>
                     );

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { 
   Compass, Plus, Rocket, ChevronRight, MoreHorizontal,
   PhoneCall, CalendarCheck, DollarSign, Users, Loader2,
-  PauseCircle, CheckCircle2, Clock, AlertCircle
+  PauseCircle, CheckCircle2, Clock, Trash2
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@/components/ui';
 
@@ -20,6 +20,7 @@ export default function CampaignsPage() {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const loadCampaigns = async () => {
     try {
@@ -48,6 +49,25 @@ export default function CampaignsPage() {
       alert(e.message || 'Error al lanzar la campaña');
     } finally {
       setLaunching(null);
+    }
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    const confirmed = window.confirm(
+      `¿Eliminar la campaña "${name}"? Los contactos y el historial de llamadas se conservarán sin campaña asociada.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(id);
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al eliminar la campaña');
+      setCampaigns((current) => current.filter((campaign) => campaign.id !== id));
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al eliminar la campaña');
+    } finally {
+      setDeleting(null);
     }
   };
 
@@ -151,6 +171,21 @@ export default function CampaignsPage() {
 
                     {/* Right: Actions */}
                     <div className="flex items-center gap-2 shrink-0">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDelete(camp.id, camp.name)}
+                        disabled={deleting === camp.id || launching === camp.id}
+                        className="flex items-center gap-1.5"
+                        aria-label={`Eliminar campaña ${camp.name}`}
+                      >
+                        {deleting === camp.id ? (
+                          <Loader2 className="animate-spin" size={14} />
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
+                        Eliminar
+                      </Button>
                       <Link href={`/campaigns/${camp.id}`}>
                         <Button variant="outline" size="sm" className="flex items-center gap-1">
                           Ver detalles <ChevronRight size={14} />
