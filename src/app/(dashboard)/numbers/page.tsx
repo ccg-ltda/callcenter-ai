@@ -23,6 +23,7 @@ import {
   Label, 
   Select 
 } from '@/components/ui';
+import { PHONE_NUMBER_ADMINISTRATIVE_AREAS, PHONE_NUMBER_COUNTRIES } from '@/lib/phoneNumberLocations';
 
 export default function NumbersPage() {
   const [loading, setLoading] = useState(true);
@@ -34,6 +35,7 @@ export default function NumbersPage() {
   
   // Search parameters
   const [searchCountry, setSearchCountry] = useState('CO');
+  const [searchAdministrativeArea, setSearchAdministrativeArea] = useState('');
   const [searchCity, setSearchCity] = useState('');
   const [availableNumbers, setAvailableNumbers] = useState<any[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
@@ -68,6 +70,7 @@ export default function NumbersPage() {
     try {
       const query = new URLSearchParams({
         country: searchCountry,
+        administrativeArea: searchAdministrativeArea,
         city: searchCity.trim(),
       });
       const res = await fetch(`/api/telnyx/numbers?${query}`);
@@ -179,26 +182,38 @@ export default function NumbersPage() {
                   </Label>
                   <Select
                     id="country"
-                    options={[
-                      { value: 'CO', label: 'Colombia (CO)' },
-                      { value: 'US', label: 'Estados Unidos (US)' },
-                      { value: 'AR', label: 'Argentina (AR)' },
-                      { value: 'MX', label: 'México (MX)' },
-                      { value: 'ES', label: 'España (ES)' },
-                    ]}
+                    options={PHONE_NUMBER_COUNTRIES}
                     value={searchCountry}
-                    onChange={(e) => { setSearchCountry(e.target.value); setSearchCity(''); }}
+                    onChange={(e) => {
+                      setSearchCountry(e.target.value);
+                      setSearchAdministrativeArea('');
+                      setSearchCity('');
+                    }}
                   />
                 </div>
 
+                {PHONE_NUMBER_ADMINISTRATIVE_AREAS[searchCountry] && (
+                  <div className="space-y-2">
+                    <Label htmlFor="administrative-area" className="flex items-center gap-1">
+                      <MapPin size={12} /> Estado / Provincia
+                    </Label>
+                    <Select
+                      id="administrative-area"
+                      options={PHONE_NUMBER_ADMINISTRATIVE_AREAS[searchCountry]}
+                      value={searchAdministrativeArea}
+                      onChange={(e) => setSearchAdministrativeArea(e.target.value)}
+                    />
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <Label htmlFor="city" className="flex items-center gap-1">
-                    <MapPin size={12} /> Localidad / Ciudad
+                    <MapPin size={12} /> Ciudad (opcional)
                   </Label>
                   <Input
                     id="city"
                     type="text"
-                    placeholder="Opcional: Bogotá, Medellín…"
+                    placeholder={searchCountry === 'US' ? 'Ejemplo: Miami' : 'Ejemplo: Bogotá'}
                     value={searchCity}
                     onChange={(e) => setSearchCity(e.target.value)}
                   />

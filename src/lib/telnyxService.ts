@@ -42,8 +42,9 @@ export const telnyxService = {
   /**
    * Search for available phone numbers
    */
-  async searchNumbers(countryCode: string = 'US', city: string = '') {
-    console.log(`[Telnyx Service] Searching numbers in Country: ${countryCode}, City: ${city} (Mock: ${isMock})`);
+  async searchNumbers(countryCode: string = 'US', city: string = '', administrativeArea: string = '') {
+    const normalizedCountry = countryCode.trim().toUpperCase();
+    console.log(`[Telnyx Service] Searching numbers in Country: ${normalizedCountry}, Administrative area: ${administrativeArea}, City: ${city} (Mock: ${isMock})`);
     
     if (isMock) {
       // Simulate API lag
@@ -59,15 +60,18 @@ export const telnyxService = {
     try {
       // Real Telnyx API Call using fetch (more robust than SDK sometimes)
       const params = new URLSearchParams({
-        'filter[country_code]': countryCode,
+        'filter[country_code]': normalizedCountry,
         'filter[limit]': '10',
       });
       if (city.trim()) params.set('filter[locality]', city.trim());
+      if (administrativeArea.trim() && ['US', 'CA'].includes(normalizedCountry)) {
+        params.set('filter[administrative_area]', administrativeArea.trim().toUpperCase());
+      }
 
       // Telnyx only supports best-effort searches for US and Canada. Without
       // this flag it returns a 400 when a locality has no exact inventory,
       // even though nearby numbers may be available.
-      if (['US', 'CA'].includes(countryCode.toUpperCase())) {
+      if (['US', 'CA'].includes(normalizedCountry)) {
         params.set('filter[best_effort]', 'true');
       }
 
