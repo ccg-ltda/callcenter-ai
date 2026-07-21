@@ -56,8 +56,28 @@ export interface ContactCallData {
   fullName: string;
 }
 
+export type TelnyxConversationMessage = {
+  role?: string;
+  text?: string;
+  content?: string;
+  created_at?: string;
+  sent_at?: string;
+};
+
 export const telnyxService = {
   isRealAssistantId,
+  async getConversationMessages(conversationId: string) {
+    if (!apiKey || !conversationId) return [] as TelnyxConversationMessage[];
+
+    const response = await fetch(
+      `https://api.telnyx.com/v2/ai/conversations/${encodeURIComponent(conversationId)}/messages?page[size]=100&page[number]=1`,
+      { headers: { Authorization: `Bearer ${apiKey}` }, cache: 'no-store' },
+    );
+    if (!response.ok) throw new Error(await telnyxService.readErrorDetails(response));
+
+    const body = await response.json();
+    return Array.isArray(body.data) ? body.data as TelnyxConversationMessage[] : [];
+  },
   async readErrorDetails(response: Response) {
     const fallback = response.statusText || `HTTP ${response.status}`;
     try {
