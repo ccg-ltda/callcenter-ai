@@ -21,4 +21,16 @@ Abre [http://localhost:3000](http://localhost:3000).
 4. Para Calendar, despliega `google-apps-script/Code.gs` como Web App y configura `GOOGLE_APPS_SCRIPT_URL` y `GOOGLE_APPS_SCRIPT_SECRET`.
 5. En produccion usa `NEXT_PUBLIC_USE_MOCK_SERVICES=false`.
 
+### Acceso privado
+
+El panel y sus APIs estan protegidos por un login administrativo. Configura estas tres variables en Vercel y vuelve a desplegar:
+
+```env
+AUTH_USERNAME=tu_usuario
+AUTH_PASSWORD=una_contrasena_larga_y_unica
+AUTH_SECRET=un_valor_aleatorio_de_al_menos_32_caracteres
+```
+
+`AUTH_SECRET` firma la cookie privada de sesion y no debe compartirse ni publicarse. Las sesiones duran 12 horas. Los endpoints de webhook y TeXML de Telnyx permanecen publicos para que Telnyx pueda comunicarse con la aplicacion.
+
 Nunca subas `.env.local`; Git lo excluye deliberadamente.

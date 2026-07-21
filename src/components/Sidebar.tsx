@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ThemeToggle from '@/components/ThemeToggle';
+import LogoutButton from '@/components/LogoutButton';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -118,6 +119,7 @@ export default function Sidebar() {
           <div className="mt-3 flex justify-start">
             <ThemeToggle />
           </div>
+          <LogoutButton />
         </div>
       </aside>
     </>
