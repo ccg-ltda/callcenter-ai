@@ -24,8 +24,26 @@ function sign(value: string, secret: string) {
 }
 
 export function isAuthConfigured() {
+  return getAuthConfigurationIssue() === null;
+}
+
+export function getAuthConfigurationIssue() {
   const { username, password, secret } = getCredentials();
-  return Boolean(username && password && secret.length >= 32);
+  const missing = [
+    !username ? 'AUTH_USERNAME' : '',
+    !password ? 'AUTH_PASSWORD' : '',
+    !secret ? 'AUTH_SECRET' : '',
+  ].filter(Boolean);
+
+  if (missing.length) {
+    return `Falta configurar ${missing.join(', ')} en el entorno de este deployment.`;
+  }
+
+  if (secret.length < 32) {
+    return `AUTH_SECRET tiene ${secret.length} caracteres y debe tener al menos 32.`;
+  }
+
+  return null;
 }
 
 export function verifyCredentials(username: string, password: string) {

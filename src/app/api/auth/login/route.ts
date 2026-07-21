@@ -3,16 +3,14 @@ import {
   AUTH_COOKIE_NAME,
   AUTH_SESSION_MAX_AGE,
   createSessionToken,
-  isAuthConfigured,
+  getAuthConfigurationIssue,
   verifyCredentials,
 } from '@/lib/server/auth';
 
 export async function POST(request: Request) {
-  if (!isAuthConfigured()) {
-    return NextResponse.json(
-      { error: 'Configura AUTH_USERNAME, AUTH_PASSWORD y AUTH_SECRET en Vercel.' },
-      { status: 503 },
-    );
+  const configurationIssue = getAuthConfigurationIssue();
+  if (configurationIssue) {
+    return NextResponse.json({ error: configurationIssue }, { status: 503 });
   }
 
   let body: { username?: unknown; password?: unknown };
