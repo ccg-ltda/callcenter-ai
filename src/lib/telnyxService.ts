@@ -66,6 +66,32 @@ export type TelnyxConversationMessage = {
 
 export const telnyxService = {
   isRealAssistantId,
+  async findConversationIdByCallId(callId: string) {
+    if (!apiKey || !callId) return null;
+
+    const params = new URLSearchParams({
+      'metadata->call_control_id': `eq.${callId}`,
+      order: 'created_at.desc',
+      limit: '1',
+    });
+    const response = await fetch(`https://api.telnyx.com/v2/ai/conversations?${params}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error(await telnyxService.readErrorDetails(response));
+
+    const body = await response.json();
+    return typeof body.data?.[0]?.id === 'string' ? body.data[0].id as string : null;
+  },
+  async getConversationMessagesForCall(callId: string) {
+    const conversationId = await telnyxService.findConversationIdByCallId(callId);
+    if (!conversationId) return { conversationId: null, messages: [] as TelnyxConversationMessage[] };
+
+    return {
+      conversationId,
+      messages: await telnyxService.getConversationMessages(conversationId),
+    };
+  },
   async getConversationMessages(conversationId: string) {
     if (!apiKey || !conversationId) return [] as TelnyxConversationMessage[];
 
@@ -286,6 +312,9 @@ export const telnyxService = {
   async ensureTexmlApplication() {
     if (connectionId) return connectionId;
 
+    const voiceUrl = process.env.TELNYX_TEXML_VOICE_URL || 'https://callcenter-ai-tau.vercel.app/api/telnyx/texml';
+    const webhookUrl = process.env.TELNYX_WEBHOOK_URL || new URL('/api/telnyx/webhook', voiceUrl).toString();
+
     const listParams = new URLSearchParams({
       'filter[friendly_name]': texmlApplicationName,
       'page[size]': '1',
@@ -295,10 +324,33 @@ export const telnyxService = {
     });
     if (!listResponse.ok) throw new Error(await telnyxService.readErrorDetails(listResponse));
     const applications = await listResponse.json();
-    const existingApplication = applications.data?.find((application: { friendly_name?: string; id?: string }) =>
+    const existingApplication = applications.data?.find((application: {
+      friendly_name?: string;
+      id?: string;
+      status_callback?: string;
+      voice_url?: string;
+    }) =>
       application.friendly_name === texmlApplicationName && application.id
     );
-    if (existingApplication?.id) return existingApplication.id as string;
+    if (existingApplication?.id) {
+      if (existingApplication.voice_url === voiceUrl && existingApplication.status_callback === webhookUrl) {
+        return existingApplication.id as string;
+      }
+      const updateResponse = await fetch(`https://api.telnyx.com/v2/texml_applications/${existingApplication.id}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          voice_url: voiceUrl,
+          status_callback: webhookUrl,
+          status_callback_method: 'post',
+        }),
+      });
+      if (!updateResponse.ok) throw new Error(await telnyxService.readErrorDetails(updateResponse));
+      return existingApplication.id as string;
+    }
 
     const profilesResponse = await fetch('https://api.telnyx.com/v2/outbound_voice_profiles?page[size]=1', {
       headers: { 'Authorization': `Bearer ${apiKey}` },
@@ -321,7 +373,6 @@ export const telnyxService = {
       outboundVoiceProfileId = profile.data?.id || '';
     }
 
-    const voiceUrl = process.env.TELNYX_TEXML_VOICE_URL || 'https://callcenter-ai-tau.vercel.app/api/telnyx/texml';
     const createApplicationResponse = await fetch('https://api.telnyx.com/v2/texml_applications', {
       method: 'POST',
       headers: {
@@ -331,6 +382,8 @@ export const telnyxService = {
       body: JSON.stringify({
         friendly_name: texmlApplicationName,
         voice_url: voiceUrl,
+        status_callback: webhookUrl,
+        status_callback_method: 'post',
         active: true,
         ...(outboundVoiceProfileId ? { outbound: { outbound_voice_profile_id: outboundVoiceProfileId } } : {}),
       }),

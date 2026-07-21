@@ -1,27 +1,13 @@
 import { NextResponse } from 'next/server';
-import type { TranscriptTurn } from '@/lib/mockData';
-import { summarizeCall } from '@/lib/server/aiSummaryService';
 import { createCalendarEvent, isGoogleAppsScriptConfigured } from '@/lib/server/calendarService';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
-import { telnyxService } from '@/lib/telnyxService';
+import { syncCallTranscript } from '@/lib/server/transcriptSync';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 function callIdentifiers(payload: any) {
-  return [payload.call_control_id, payload.call_leg_id, payload.call_session_id, payload.call_sid]
+  return [payload.call_control_id, payload.call_leg_id, payload.call_session_id, payload.call_sid, payload.CallSid, payload.CallSidLegacy]
     .filter((value, index, values): value is string => typeof value === 'string' && value.length > 0 && values.indexOf(value) === index);
-}
-
-function normalizeTranscript(raw: any): TranscriptTurn[] {
-  if (!Array.isArray(raw)) return [];
-  return raw
-    .filter((turn) => !turn.role || ['assistant', 'agent', 'user'].includes(turn.role))
-    .map((turn) => ({
-      role: (turn.role === 'assistant' || turn.role === 'agent' || turn.from === 'ai' ? 'agent' : 'user') as 'agent' | 'user',
-      text: turn.text || turn.content || turn.transcript || '',
-      timestamp: turn.timestamp || turn.sent_at || turn.created_at || new Date().toISOString(),
-    }))
-    .filter((turn) => turn.text);
 }
 
 async function findCall(identifiers: string[]) {
@@ -71,26 +57,19 @@ async function handleConversationEnded(identifiers: string[], payload: any) {
   if (!call) return;
 
   const { data: settings } = await supabase.from('settings').select('timezone, google_calendar_connected').eq('id', 'default').single();
-  let transcript = normalizeTranscript(payload.transcript || payload.conversation || payload.messages);
-  if (!transcript.length && payload.conversation_id) {
-    try {
-      transcript = normalizeTranscript(await telnyxService.getConversationMessages(payload.conversation_id));
-    } catch (error) {
-      console.error('[Telnyx Webhook] Could not retrieve conversation messages:', error);
-    }
-  }
-  const summary = await summarizeCall(transcript, settings?.timezone || 'America/Bogota');
-  const { error: transcriptError } = await supabase.from('transcripts').upsert({
-    id: `tr_${call.id}`, call_id: call.id, full_transcript: transcript, ai_summary: summary.summary,
-    interested: summary.interested, sentiment: summary.sentiment, next_steps: summary.nextSteps,
-  });
-  if (transcriptError) throw transcriptError;
   await updateCall(identifiers, {
     status: 'completed',
     ended_at: new Date().toISOString(),
     ...(payload.duration_sec ? { duration_seconds: Number(payload.duration_sec) } : {}),
     ...(payload.recording_url || payload.media_url ? { recording_url: payload.recording_url || payload.media_url } : {}),
   });
+  const synced = await syncCallTranscript(call.id, {
+    conversationId: payload.conversation_id,
+    rawTranscript: payload.transcript || payload.conversation || payload.messages,
+    telnyxCallId: call.telnyx_call_id || identifiers[0],
+  });
+  if (!synced) return;
+  const { summary } = synced;
   if (!summary.interested || !summary.proposedDateTime) return;
 
   const meetingId = `mtg_${crypto.randomUUID()}`;
@@ -117,10 +96,14 @@ async function handleConversationEnded(identifiers: string[], payload: any) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    const body = contentType.includes('application/json')
+      ? await request.json()
+      : Object.fromEntries((await request.formData()).entries());
     const data = body.data || body;
-    const eventType = data.event_type || data.record_type;
-    const payload = data.payload || {};
+    const callStatus = typeof data.CallStatus === 'string' ? data.CallStatus.toLowerCase() : '';
+    const eventType = data.event_type || (callStatus === 'completed' ? 'call.hangup' : callStatus ? `call.${callStatus}` : data.record_type);
+    const payload = data.payload || data;
     const identifiers = callIdentifiers(payload);
     if (!eventType || !identifiers.length) return NextResponse.json({ received: true });
     if (useMockServices) console.info(`[Webhook mock] ${eventType}: ${identifiers[0]}`);
@@ -132,11 +115,18 @@ export async function POST(request: Request) {
     }
     if (eventType === 'call.hangup') {
       const call = await findCall(identifiers);
-      const durationSeconds = Number(payload.duration_secs || (call?.started_at ? Math.max(0, Math.round((Date.now() - new Date(call.started_at).getTime()) / 1000)) : 0));
+      const durationSeconds = Number(payload.duration_secs || payload.CallDuration || (call?.started_at ? Math.max(0, Math.round((Date.now() - new Date(call.started_at).getTime()) / 1000)) : 0));
       const costUsd = Number(((durationSeconds / 60) * 0.006).toFixed(4));
       await updateCall(identifiers, { status: 'completed', ended_at: new Date().toISOString(), duration_seconds: durationSeconds, cost_usd: costUsd, outcome: payload.hangup_cause || (durationSeconds ? 'completed' : 'no_answer') });
       if (!durationSeconds) await updateContact(identifiers, 'no_answer');
       await updateMetrics(call, durationSeconds, costUsd);
+      if (call) {
+        try {
+          await syncCallTranscript(call.id, { telnyxCallId: call.telnyx_call_id || identifiers[0] });
+        } catch (error) {
+          console.error('[Telnyx Webhook] Transcript reconciliation will be retried from the dashboard:', error);
+        }
+      }
     }
     if (['call.conversation.ended', 'assistant.conversation.ended', 'ai.conversation_ended'].includes(eventType)) {
       await handleConversationEnded(identifiers, payload);

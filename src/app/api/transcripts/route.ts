@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { mockTranscripts } from '@/lib/mockData';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { syncCallTranscript } from '@/lib/server/transcriptSync';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -13,13 +14,29 @@ export async function GET() {
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const pendingCalls = (data || []).filter((call: any) => {
+    const transcript = Array.isArray(call.transcript) ? call.transcript[0] : call.transcript;
+    return call.status === 'completed' && (!transcript || !Array.isArray(transcript.full_transcript) || !transcript.full_transcript.length);
+  }).slice(0, 10);
+  const reconciled = await Promise.allSettled(pendingCalls.map(async (call: any) => {
+    const result = await syncCallTranscript(call.id, { telnyxCallId: call.telnyx_call_id });
+    if (result) call.transcript = [{ ...result.transcript, created_at: new Date().toISOString() }];
+  }));
+  reconciled.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error(`[Transcripts] Could not reconcile call ${pendingCalls[index].id}:`, result.reason);
+    }
+  });
+
   return NextResponse.json((data || []).map((call: any) => {
     const transcript = Array.isArray(call.transcript) ? call.transcript[0] : call.transcript;
+    const fullTranscript = Array.isArray(transcript?.full_transcript) ? transcript.full_transcript : [];
     return {
       id: transcript?.id || `pending_${call.id}`,
       callId: call.id,
-      hasTranscript: Boolean(transcript),
-      fullTranscript: transcript?.full_transcript || [],
+      hasTranscript: fullTranscript.length > 0,
+      fullTranscript,
       aiSummary: transcript?.ai_summary || 'La transcripción de esta llamada todavía no está disponible.',
       interested: transcript?.interested || false,
       sentiment: transcript?.sentiment || 'neutral',
