@@ -169,7 +169,7 @@ export async function POST(request: Request) {
         }
       }
     }
-    if (['call.conversation.ended', 'assistant.conversation.ended', 'ai.conversation_ended'].includes(eventType)) {
+    if (['conversation_ended', 'call.conversation.ended', 'assistant.conversation.ended', 'ai.conversation_ended'].includes(eventType)) {
       await handleConversationEnded(identifiers, payload);
     }
     return NextResponse.json({ received: true, event: eventType });
