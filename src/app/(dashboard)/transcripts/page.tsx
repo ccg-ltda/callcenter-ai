@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Bot, FileText, Headphones, MessageSquare, User } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Bot, FileText, Headphones, MessageSquare, PhoneIncoming, PhoneOutgoing, User } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 
 type Turn = { role: 'agent' | 'user'; text: string; timestamp: string };
+type Direction = 'inbound' | 'outbound';
 type Transcript = {
   id: string;
   hasTranscript: boolean;
@@ -17,6 +18,7 @@ type Transcript = {
   call: {
     status: string;
     durationSeconds: number;
+    direction?: Direction;
     recordingUrl?: string | null;
     contact: { fullName: string; company?: string; phone: string } | null;
   };
@@ -28,8 +30,13 @@ const sentimentLabel: Record<string, string> = {
   negative: 'Negativo',
 };
 
+function getDirection(item: Transcript): Direction {
+  return item.call.direction === 'inbound' ? 'inbound' : 'outbound';
+}
+
 export default function TranscriptsPage() {
   const [items, setItems] = useState<Transcript[]>([]);
+  const [activeDirection, setActiveDirection] = useState<Direction>('inbound');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,7 +50,7 @@ export default function TranscriptsPage() {
       })
       .then((data) => {
         setItems(data);
-        setSelectedId(data[0]?.id || null);
+        setSelectedId(data.find((item) => getDirection(item) === 'inbound')?.id || null);
       })
       .catch((requestError) => {
         setError(requestError instanceof Error ? requestError.message : 'No se pudo cargar el historial.');
@@ -51,7 +58,19 @@ export default function TranscriptsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const selected = items.find((item) => item.id === selectedId);
+  const itemsByDirection = useMemo(() => ({
+    inbound: items.filter((item) => getDirection(item) === 'inbound'),
+    outbound: items.filter((item) => getDirection(item) === 'outbound'),
+  }), [items]);
+
+  const filteredItems = itemsByDirection[activeDirection];
+  const selected = filteredItems.find((item) => item.id === selectedId);
+  const directionLabel = activeDirection === 'inbound' ? 'entrantes' : 'salientes';
+
+  function changeDirection(direction: Direction) {
+    setActiveDirection(direction);
+    setSelectedId(itemsByDirection[direction][0]?.id || null);
+  }
 
   return (
     <div className="space-y-6">
@@ -60,19 +79,48 @@ export default function TranscriptsPage() {
         <p className="mt-1 text-sm text-muted-foreground">Conversaciones completas, grabaciones y análisis automático.</p>
       </div>
 
+      <div className="grid gap-3 sm:grid-cols-2" role="group" aria-label="Tipo de llamada">
+        {[
+          { direction: 'inbound' as const, label: 'Llamadas entrantes', icon: PhoneIncoming, count: itemsByDirection.inbound.length },
+          { direction: 'outbound' as const, label: 'Llamadas salientes', icon: PhoneOutgoing, count: itemsByDirection.outbound.length },
+        ].map(({ direction, label, icon: Icon, count }) => {
+          const selectedDirection = activeDirection === direction;
+          return <button
+            key={direction}
+            type="button"
+            aria-pressed={selectedDirection}
+            onClick={() => changeDirection(direction)}
+            className={`flex items-center justify-between rounded-xl border px-5 py-4 text-left transition-colors ${
+              selectedDirection
+                ? 'border-[#3b82f6] bg-[#3b82f6]/10 text-foreground'
+                : 'border-border bg-card text-muted-foreground hover:border-[#3b82f6]/50 hover:text-foreground'
+            }`}
+          >
+            <span className="flex items-center gap-3">
+              <Icon size={20} className={selectedDirection ? 'text-[#3b82f6]' : ''} />
+              <span className="font-semibold">{label}</span>
+            </span>
+            <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${
+              selectedDirection ? 'bg-[#3b82f6] text-white' : 'bg-muted text-muted-foreground'
+            }`}>{count}</span>
+          </button>;
+        })}
+      </div>
+
       <div className="grid min-h-[620px] gap-6 lg:grid-cols-[340px_1fr]">
         <Card>
-          <CardHeader><CardTitle>Historial de llamadas</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Transcripciones {directionLabel}</CardTitle></CardHeader>
           <CardContent className="p-2">
             {loading ? (
               <p className="p-6 text-sm text-muted-foreground">Cargando…</p>
             ) : error ? (
               <p className="p-6 text-sm text-red-400">{error}</p>
-            ) : !items.length ? (
-              <p className="p-6 text-sm text-muted-foreground">Todavía no hay llamadas registradas.</p>
-            ) : items.map((item) => (
+            ) : !filteredItems.length ? (
+              <p className="p-6 text-sm text-muted-foreground">Todavía no hay llamadas {directionLabel} registradas.</p>
+            ) : filteredItems.map((item) => (
               <button
                 key={item.id}
+                type="button"
                 onClick={() => setSelectedId(item.id)}
                 className={`mb-1 w-full rounded-lg border p-4 text-left transition ${
                   selectedId === item.id
@@ -82,8 +130,12 @@ export default function TranscriptsPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="font-semibold text-foreground">{item.call.contact?.fullName || 'Contacto'}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{item.call.contact?.company || item.call.contact?.phone}</p>
+                    <p className="font-semibold text-foreground">
+                      {item.call.contact?.fullName || (activeDirection === 'inbound' ? 'Llamada entrante' : 'Contacto')}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {item.call.contact?.company || item.call.contact?.phone}
+                    </p>
                   </div>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] ${
                     item.hasTranscript ? 'bg-emerald-500/10 text-emerald-400' : 'bg-amber-500/10 text-amber-400'
@@ -105,7 +157,9 @@ export default function TranscriptsPage() {
             <Card>
               <CardHeader className="flex-row items-center justify-between space-y-0">
                 <div>
-                  <CardTitle>{selected.call.contact?.fullName || 'Contacto'}</CardTitle>
+                  <CardTitle>
+                    {selected.call.contact?.fullName || (activeDirection === 'inbound' ? 'Llamada entrante' : 'Contacto')}
+                  </CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">{selected.call.contact?.phone}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs ${
@@ -118,7 +172,9 @@ export default function TranscriptsPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="rounded-lg border border-border bg-background p-4">
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Sentimiento</p>
-                    <p className="mt-1 font-medium text-foreground">{sentimentLabel[selected.sentiment] || selected.sentiment}</p>
+                    <p className="mt-1 font-medium text-foreground">
+                      {sentimentLabel[selected.sentiment] || selected.sentiment}
+                    </p>
                   </div>
                   <div className="rounded-lg border border-border bg-background p-4">
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Siguiente paso</p>
@@ -142,7 +198,9 @@ export default function TranscriptsPage() {
             </Card>
 
             <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><MessageSquare size={18} /> Conversación</CardTitle></CardHeader>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><MessageSquare size={18} /> Conversación</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-4">
                 {selected.fullTranscript.length ? selected.fullTranscript.map((turn, index) => (
                   <div key={index} className={`flex gap-3 ${turn.role === 'agent' ? '' : 'flex-row-reverse'}`}>
@@ -172,7 +230,9 @@ export default function TranscriptsPage() {
             <CardContent className="grid h-full place-items-center text-center">
               <div>
                 <FileText className="mx-auto text-muted-foreground" size={36} />
-                <p className="mt-3 text-sm text-muted-foreground">Selecciona una llamada para abrirla.</p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  No hay una transcripción {activeDirection === 'inbound' ? 'entrante' : 'saliente'} para abrir.
+                </p>
               </div>
             </CardContent>
           </Card>
