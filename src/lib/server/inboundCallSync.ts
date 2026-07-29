@@ -76,6 +76,7 @@ async function reconcile() {
         to_number: conversation.metadata?.to || settings.telnyx_phone_number,
         status: settled ? 'completed' : 'in_progress',
         started_at: startedAt.toISOString(),
+        created_at: startedAt.toISOString(),
         ...(settled ? {
           ended_at: lastMessageAt!.toISOString(),
           duration_seconds: durationSeconds,
