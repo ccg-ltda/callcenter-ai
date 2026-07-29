@@ -17,9 +17,11 @@ Abre [http://localhost:3000](http://localhost:3000).
 
 1. Importa este repositorio en Vercel.
 2. Usa el preset **Next.js** y deja los comandos predeterminados (`npm run build`).
-3. Registra en Vercel las variables de `.env.example` para Production, Preview y Development segun corresponda.
+3. Registra en Vercel las variables de `.env.example` para Production, Preview y Development segun corresponda. `DATABASE_URL` debe contener la conexión PostgreSQL de Supabase para que Vercel aplique las migraciones antes de compilar.
 4. Para Calendar, despliega `google-apps-script/Code.gs` como Web App y configura `GOOGLE_APPS_SCRIPT_URL` y `GOOGLE_APPS_SCRIPT_SECRET`.
 5. En produccion usa `NEXT_PUBLIC_USE_MOCK_SERVICES=false`.
+
+El archivo `vercel.json` ejecuta `npm run db:migrate` antes de cada compilación. Drizzle solo aplica las migraciones que todavía no estén registradas en la base de datos.
 
 ### Acceso privado
 

@@ -9,7 +9,11 @@ import {
   ShieldCheck, 
   Globe, 
   MapPin,
-  AlertCircle
+  AlertCircle,
+  Bot,
+  PhoneIncoming,
+  Save,
+  CheckCircle2
 } from 'lucide-react';
 import { 
   Card, 
@@ -33,9 +37,14 @@ export default function NumbersPage() {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [buying, setBuying] = useState(false);
+  const [savingInbound, setSavingInbound] = useState(false);
+  const [inboundMessage, setInboundMessage] = useState('');
+  const [inboundError, setInboundError] = useState('');
 
   // Active settings
   const [currentNumber, setCurrentNumber] = useState('');
+  const [agents, setAgents] = useState<{ id: string; name: string }[]>([]);
+  const [inboundAgentId, setInboundAgentId] = useState('');
   
   // Search parameters
   const [searchCountry, setSearchCountry] = useState('CO');
@@ -49,10 +58,19 @@ export default function NumbersPage() {
   // Load current setting number
   const loadCurrentNumber = async () => {
     try {
-      const res = await fetch('/api/settings');
-      if (res.ok) {
-        const data = await res.json();
+      const [settingsResponse, agentsResponse, routingResponse] = await Promise.all([
+        fetch('/api/settings'),
+        fetch('/api/agents'),
+        fetch('/api/telnyx/inbound-routing'),
+      ]);
+      if (settingsResponse.ok) {
+        const data = await settingsResponse.json();
         setCurrentNumber(data?.telnyxPhoneNumber || 'Ninguno');
+      }
+      if (agentsResponse.ok) setAgents(await agentsResponse.json());
+      if (routingResponse.ok) {
+        const routing = await routingResponse.json();
+        setInboundAgentId(routing.inboundAgentId || '');
       }
     } catch (err) {
       console.error('Error loading current number:', err);
@@ -64,6 +82,26 @@ export default function NumbersPage() {
   useEffect(() => {
     loadCurrentNumber();
   }, []);
+
+  const handleSaveInbound = async () => {
+    setSavingInbound(true);
+    setInboundError('');
+    setInboundMessage('');
+    try {
+      const response = await fetch('/api/telnyx/inbound-routing', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: inboundAgentId }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(data?.error || 'No se pudo activar la línea entrante.');
+      setInboundMessage('Línea entrante activa. Las nuevas llamadas serán atendidas por el agente seleccionado.');
+    } catch (error) {
+      setInboundError(error instanceof Error ? error.message : 'No se pudo activar la línea entrante.');
+    } finally {
+      setSavingInbound(false);
+    }
+  };
 
   // Search numbers
   const handleSearch = async (e: React.FormEvent) => {
@@ -140,8 +178,8 @@ export default function NumbersPage() {
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Title */}
       <div>
-        <h1 className="text-3xl font-extrabold text-foreground">Comprar Número de Teléfono</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Adquiere un número telefónico local en Telnyx para asociar tus campañas y realizar llamadas.</p>
+        <h1 className="text-3xl font-extrabold text-foreground">Números Telnyx</h1>
+        <p className="text-muted-foreground mt-1 text-sm">Administra tu número Telnyx para realizar y recibir llamadas con agentes de IA.</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -170,6 +208,65 @@ export default function NumbersPage() {
                   </span>
                 )}
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <PhoneIncoming size={18} className="text-[#3b82f6]" />
+                Llamadas entrantes
+              </CardTitle>
+              <CardDescription>Elige qué agente atenderá cuando llamen a este número.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-xl border border-border bg-background p-4">
+                <div className="mb-3 flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-lg bg-[#3b82f6]/10 text-[#3b82f6]">
+                    <Bot size={17} />
+                  </span>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Agente receptor</p>
+                    <p className="text-xs text-muted-foreground">{currentNumber}</p>
+                  </div>
+                </div>
+                <Select
+                  aria-label="Agente para llamadas entrantes"
+                  options={[
+                    { value: '', label: agents.length ? 'Selecciona un agente' : 'No hay agentes disponibles' },
+                    ...agents.map((agent) => ({ value: agent.id, label: agent.name })),
+                  ]}
+                  value={inboundAgentId}
+                  onChange={(event) => {
+                    setInboundAgentId(event.target.value);
+                    setInboundError('');
+                    setInboundMessage('');
+                  }}
+                  disabled={!agents.length || currentNumber === 'Ninguno'}
+                />
+              </div>
+
+              {inboundError && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-300">
+                  <AlertCircle size={15} className="mt-0.5 shrink-0" />
+                  <span>{inboundError}</span>
+                </div>
+              )}
+              {inboundMessage && (
+                <div className="flex items-start gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-xs text-emerald-300">
+                  <CheckCircle2 size={15} className="mt-0.5 shrink-0" />
+                  <span>{inboundMessage}</span>
+                </div>
+              )}
+
+              <Button
+                className="w-full gap-2"
+                onClick={handleSaveInbound}
+                disabled={savingInbound || !inboundAgentId || currentNumber === 'Ninguno'}
+              >
+                {savingInbound ? <Loader2 className="animate-spin" size={15} /> : <Save size={15} />}
+                {savingInbound ? 'Activando…' : 'Activar recepción'}
+              </Button>
             </CardContent>
           </Card>
 

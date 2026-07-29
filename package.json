@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "db:migrate": "drizzle-kit migrate",
     "start": "next start",
     "lint": "eslint"
   },

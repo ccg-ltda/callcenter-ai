@@ -4,7 +4,7 @@ import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { isGoogleAppsScriptConfigured } from '@/lib/server/calendarService';
 
 const defaults = {
-  id: 'default', telnyx_phone_number: '', telnyx_assistant_id: '', google_calendar_connected: false,
+  id: 'default', telnyx_phone_number: '', telnyx_assistant_id: '', inbound_agent_id: null, google_calendar_connected: false,
   call_window_start: '10:00', call_window_end: '18:00', timezone: 'America/Bogota',
 };
 
@@ -42,6 +42,7 @@ export async function POST(request: Request) {
     if (body.telnyxApiKey) values.telnyx_api_key = body.telnyxApiKey;
     if (body.telnyxPhoneNumber !== undefined) values.telnyx_phone_number = body.telnyxPhoneNumber;
     if (body.telnyxAssistantId !== undefined) values.telnyx_assistant_id = body.telnyxAssistantId;
+    if (body.inboundAgentId !== undefined) values.inbound_agent_id = body.inboundAgentId || null;
     if (body.googleCalendarConnected !== undefined) values.google_calendar_connected = body.googleCalendarConnected;
     if (body.googleRefreshToken !== undefined) values.google_refresh_token = body.googleRefreshToken;
     if (body.callWindowStart !== undefined) values.call_window_start = body.callWindowStart;

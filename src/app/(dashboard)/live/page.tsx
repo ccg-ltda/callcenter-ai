@@ -5,7 +5,16 @@ import { Clock3, PhoneCall, Radio, RefreshCw, Users } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, Button } from '@/components/ui';
 import { supabase } from '@/lib/supabase';
 
-type Call = { id: string; status: string; startedAt: string | null; durationSeconds: number; contact: { fullName: string; phone: string; company?: string } | null };
+type Call = {
+  id: string;
+  status: string;
+  startedAt: string | null;
+  durationSeconds: number;
+  direction?: 'inbound' | 'outbound';
+  fromNumber?: string | null;
+  contact: { fullName: string; phone: string; company?: string } | null;
+  agent?: { id: string; name: string } | null;
+};
 
 const labels: Record<string, string> = { queued: 'En cola', ringing: 'Marcando', in_progress: 'En conversación', completed: 'Completada', failed: 'Fallida' };
 const colors: Record<string, string> = { queued: 'text-muted-foreground bg-muted/10', ringing: 'text-amber-300 bg-amber-400/10', in_progress: 'text-[#3b82f6] bg-[#3b82f6]/10', completed: 'text-blue-300 bg-blue-400/10', failed: 'text-red-300 bg-red-400/10' };
@@ -56,7 +65,7 @@ export default function LiveCallsPage() {
       <CardContent className="p-0">
         {loading ? <p className="p-8 text-center text-sm text-muted-foreground">Sincronizando llamadas…</p> :
         <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="border-b border-border text-xs uppercase text-muted-foreground"><tr><th className="px-6 py-4">Contacto</th><th className="px-6 py-4">Estado</th><th className="px-6 py-4">Duración</th><th className="px-6 py-4">Actividad</th></tr></thead><tbody className="divide-y divide-border/60">
-          {calls.map((call) => <tr key={call.id} className="hover:bg-white/[0.02]"><td className="px-6 py-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#3b82f6]/10 text-[#3b82f6]"><Users size={16} /></span><div><p className="font-medium text-foreground">{call.contact?.fullName || 'Contacto'}</p><p className="text-xs text-muted-foreground">{call.contact?.company || call.contact?.phone}</p></div></div></td><td className="px-6 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${colors[call.status] || colors.queued}`}>{labels[call.status] || call.status}</span></td><td className="px-6 py-4 font-mono text-muted-foreground">{String(Math.floor(elapsed(call, tick) / 60)).padStart(2, '0')}:{String(elapsed(call, tick) % 60).padStart(2, '0')}</td><td className="px-6 py-4"><div className={`flex h-7 items-end gap-1 ${call.status === 'in_progress' ? '' : 'opacity-30'}`}>{[9, 17, 12, 22, 14, 19, 8, 15].map((h, i) => <span key={i} className="w-1 rounded-full bg-[#3b82f6] animate-pulse" style={{ height: h, animationDelay: `${i * 90}ms` }} />)}</div></td></tr>)}
+          {calls.map((call) => <tr key={call.id} className="hover:bg-white/[0.02]"><td className="px-6 py-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center rounded-lg bg-[#3b82f6]/10 text-[#3b82f6]"><Users size={16} /></span><div><p className="font-medium text-foreground">{call.contact?.fullName || (call.direction === 'inbound' ? 'Llamada entrante' : 'Contacto')}</p><p className="text-xs text-muted-foreground">{call.contact?.company || call.contact?.phone || call.fromNumber}{call.agent?.name ? ` · ${call.agent.name}` : ''}</p></div></div></td><td className="px-6 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-medium ${colors[call.status] || colors.queued}`}>{labels[call.status] || call.status}</span></td><td className="px-6 py-4 font-mono text-muted-foreground">{String(Math.floor(elapsed(call, tick) / 60)).padStart(2, '0')}:{String(elapsed(call, tick) % 60).padStart(2, '0')}</td><td className="px-6 py-4"><div className={`flex h-7 items-end gap-1 ${call.status === 'in_progress' ? '' : 'opacity-30'}`}>{[9, 17, 12, 22, 14, 19, 8, 15].map((h, i) => <span key={i} className="w-1 rounded-full bg-[#3b82f6] animate-pulse" style={{ height: h, animationDelay: `${i * 90}ms` }} />)}</div></td></tr>)}
         </tbody></table></div>}
       </CardContent>
     </Card>

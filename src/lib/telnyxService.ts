@@ -396,6 +396,48 @@ export const telnyxService = {
     return application.data.id as string;
   },
 
+  async assignNumberToTexmlApplication(phoneNumber: string) {
+    if (isMock) return { success: true };
+
+    const normalized = normalizePhoneNumber(phoneNumber);
+    if (!/^\+[1-9]\d{7,14}$/.test(normalized)) {
+      throw new Error('El número configurado no es válido para recibir llamadas.');
+    }
+
+    const ownershipResponse = await fetch('https://api.telnyx.com/v2/phone_numbers/actions/verify_ownership', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ phone_numbers: [normalized] }),
+    });
+    if (!ownershipResponse.ok) {
+      throw new Error(await telnyxService.readErrorDetails(ownershipResponse));
+    }
+
+    const ownership = await ownershipResponse.json();
+    const phoneNumberId = ownership.data?.found?.[0]?.id;
+    if (!phoneNumberId) {
+      throw new Error('El número no pertenece a la cuenta de Telnyx configurada.');
+    }
+
+    const texmlApplicationId = await telnyxService.ensureTexmlApplication();
+    const updateResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${encodeURIComponent(phoneNumberId)}`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ connection_id: texmlApplicationId }),
+    });
+    if (!updateResponse.ok) {
+      throw new Error(await telnyxService.readErrorDetails(updateResponse));
+    }
+
+    return { success: true, connectionId: texmlApplicationId };
+  },
+
   /**
    * Trigger an outbound call connected to the assistant
    */

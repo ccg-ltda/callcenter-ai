@@ -6,6 +6,7 @@ export const settings = pgTable('settings', {
   telnyxApiKey: text('telnyx_api_key'),
   telnyxPhoneNumber: text('telnyx_phone_number'),
   telnyxAssistantId: text('telnyx_assistant_id'),
+  inboundAgentId: text('inbound_agent_id'),
   googleCalendarConnected: boolean('google_calendar_connected').default(false),
   googleRefreshToken: text('google_refresh_token'),
   callWindowStart: text('call_window_start').default('10:00'),
@@ -59,7 +60,11 @@ export const calls = pgTable('calls', {
   id: text('id').primaryKey(),
   contactId: text('contact_id').references(() => contacts.id),
   campaignId: text('campaign_id').references(() => campaigns.id),
+  agentId: text('agent_id').references(() => agents.id),
   telnyxCallId: text('telnyx_call_id'),
+  direction: text('direction').default('outbound'), // inbound, outbound
+  fromNumber: text('from_number'),
+  toNumber: text('to_number'),
   status: text('status').default('queued'), // queued, ringing, in_progress, completed, failed
   startedAt: timestamp('started_at', { withTimezone: true }),
   endedAt: timestamp('ended_at', { withTimezone: true }),

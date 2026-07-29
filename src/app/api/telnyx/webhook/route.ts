@@ -15,7 +15,7 @@ async function findCall(identifiers: string[]) {
   if (!supabase || !identifiers.length) return null;
   const { data } = await supabase
     .from('calls')
-    .select('id, contact_id, campaign_id, started_at, telnyx_call_id, contact:contacts(full_name, phone, company)')
+    .select('id, contact_id, campaign_id, agent_id, direction, from_number, to_number, started_at, telnyx_call_id, contact:contacts(full_name, phone, company)')
     .in('telnyx_call_id', identifiers)
     .limit(1)
     .maybeSingle();
@@ -70,6 +70,7 @@ async function handleConversationEnded(identifiers: string[], payload: any) {
   });
   if (!synced) return;
   const { summary } = synced;
+  if (!call.contact_id || !call.campaign_id) return;
   if (!summary.interested || !summary.proposedDateTime) return;
 
   const meetingId = `mtg_${crypto.randomUUID()}`;

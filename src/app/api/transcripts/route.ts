@@ -10,7 +10,7 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase!
     .from('calls')
-    .select('*, contact:contacts(id, full_name, phone, company), transcript:transcripts(*)')
+    .select('*, contact:contacts(id, full_name, phone, company), agent:agents(id, name), transcript:transcripts(*)')
     .order('created_at', { ascending: false })
     .limit(100);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -48,11 +48,18 @@ export async function GET() {
         durationSeconds: call.duration_seconds || 0,
         recordingUrl: call.recording_url || null,
         startedAt: call.started_at,
+        direction: call.direction || 'outbound',
+        agent: call.agent ? { id: call.agent.id, name: call.agent.name } : null,
         contact: call.contact ? {
           id: call.contact.id,
           fullName: call.contact.full_name,
           phone: call.contact.phone,
           company: call.contact.company,
+        } : call.direction === 'inbound' ? {
+          id: `caller_${call.id}`,
+          fullName: 'Llamada entrante',
+          phone: call.from_number || 'Número desconocido',
+          company: null,
         } : null,
       },
     };
