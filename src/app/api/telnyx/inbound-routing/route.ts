@@ -51,7 +51,7 @@ export async function PUT(request: Request) {
       goal: agent.goal || undefined,
     }, agent.telnyx_assistant_id);
 
-    await telnyxService.assignNumberToTexmlApplication(settings.telnyx_phone_number);
+    await telnyxService.assignNumberToAssistant(settings.telnyx_phone_number, assistant.id);
 
     const { error: agentUpdateError } = await supabase
       .from('agents')

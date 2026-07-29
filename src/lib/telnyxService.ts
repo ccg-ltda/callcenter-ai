@@ -396,7 +396,7 @@ export const telnyxService = {
     return application.data.id as string;
   },
 
-  async assignNumberToTexmlApplication(phoneNumber: string) {
+  async assignNumberToAssistant(phoneNumber: string, assistantId: string) {
     if (isMock) return { success: true };
 
     const normalized = normalizePhoneNumber(phoneNumber);
@@ -422,7 +422,27 @@ export const telnyxService = {
       throw new Error('El número no pertenece a la cuenta de Telnyx configurada.');
     }
 
-    const texmlApplicationId = await telnyxService.ensureTexmlApplication();
+    if (!isRealAssistantId(assistantId)) {
+      throw new Error('El agente no tiene un asistente real de Telnyx.');
+    }
+
+    const assistantTexmlUrl = `https://api.telnyx.com/v2/ai/assistants/${encodeURIComponent(assistantId)}/texml`;
+    const applicationsResponse = await fetch('https://api.telnyx.com/v2/texml_applications?page[size]=250', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      cache: 'no-store',
+    });
+    if (!applicationsResponse.ok) {
+      throw new Error(await telnyxService.readErrorDetails(applicationsResponse));
+    }
+    const applications = await applicationsResponse.json();
+    const assistantApplication = applications.data?.find((application: { id?: string; voice_url?: string }) =>
+      application.id && application.voice_url === assistantTexmlUrl
+    );
+    if (!assistantApplication?.id) {
+      throw new Error('Telnyx todavía no creó la aplicación de voz del asistente. Guarda nuevamente el agente e intenta otra vez.');
+    }
+
+    const texmlApplicationId = assistantApplication.id as string;
     const updateResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${encodeURIComponent(phoneNumberId)}`, {
       method: 'PATCH',
       headers: {
@@ -435,7 +455,7 @@ export const telnyxService = {
       throw new Error(await telnyxService.readErrorDetails(updateResponse));
     }
 
-    return { success: true, connectionId: texmlApplicationId };
+    return { success: true, connectionId: texmlApplicationId, assistantId };
   },
 
   /**
