@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { mockTranscripts } from '@/lib/mockData';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { reconcileRecentInboundCalls } from '@/lib/server/inboundCallSync';
 import { syncCallTranscript } from '@/lib/server/transcriptSync';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export async function GET() {
   if (useMockServices) return NextResponse.json(mockTranscripts);
+  await reconcileRecentInboundCalls();
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase!
     .from('calls')

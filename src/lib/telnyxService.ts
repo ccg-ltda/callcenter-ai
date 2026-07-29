@@ -64,8 +64,36 @@ export type TelnyxConversationMessage = {
   sent_at?: string;
 };
 
+export type TelnyxConversation = {
+  id: string;
+  created_at?: string;
+  last_message_at?: string | null;
+  metadata?: {
+    to?: string;
+    from?: string;
+    call_control_id?: string;
+    telnyx_conversation_channel?: string;
+  };
+};
+
 export const telnyxService = {
   isRealAssistantId,
+  async listRecentConversations(limit = 20) {
+    if (!apiKey) return [] as TelnyxConversation[];
+
+    const params = new URLSearchParams({
+      order: 'created_at.desc',
+      'page[size]': String(limit),
+    });
+    const response = await fetch(`https://api.telnyx.com/v2/ai/conversations?${params}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error(await telnyxService.readErrorDetails(response));
+
+    const body = await response.json();
+    return Array.isArray(body.data) ? body.data as TelnyxConversation[] : [];
+  },
   async findConversationIdByCallId(callId: string) {
     if (!apiKey || !callId) return null;
 
@@ -459,6 +487,10 @@ export const telnyxService = {
     );
     if (!applicationUpdateResponse.ok) {
       throw new Error(await telnyxService.readErrorDetails(applicationUpdateResponse));
+    }
+    const updatedApplication = await applicationUpdateResponse.json();
+    if (updatedApplication.data?.status_callback !== statusCallbackUrl) {
+      throw new Error('Telnyx no guardó la URL de eventos de llamadas. Intenta activar nuevamente el agente.');
     }
 
     const updateResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${encodeURIComponent(phoneNumberId)}`, {
