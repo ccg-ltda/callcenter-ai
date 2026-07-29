@@ -396,7 +396,7 @@ export const telnyxService = {
     return application.data.id as string;
   },
 
-  async assignNumberToAssistant(phoneNumber: string, assistantId: string) {
+  async assignNumberToAssistant(phoneNumber: string, assistantId: string, statusCallbackUrl: string) {
     if (isMock) return { success: true };
 
     const normalized = normalizePhoneNumber(phoneNumber);
@@ -443,6 +443,24 @@ export const telnyxService = {
     }
 
     const texmlApplicationId = assistantApplication.id as string;
+    const applicationUpdateResponse = await fetch(
+      `https://api.telnyx.com/v2/texml_applications/${encodeURIComponent(texmlApplicationId)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status_callback: statusCallbackUrl,
+          status_callback_method: 'post',
+        }),
+      },
+    );
+    if (!applicationUpdateResponse.ok) {
+      throw new Error(await telnyxService.readErrorDetails(applicationUpdateResponse));
+    }
+
     const updateResponse = await fetch(`https://api.telnyx.com/v2/phone_numbers/${encodeURIComponent(phoneNumberId)}`, {
       method: 'PATCH',
       headers: {

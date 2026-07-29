@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createCalendarEvent, isGoogleAppsScriptConfigured } from '@/lib/server/calendarService';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { syncCallTranscript } from '@/lib/server/transcriptSync';
+import { normalizePhoneNumber } from '@/lib/phoneNumbers';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -25,6 +26,44 @@ async function findCall(identifiers: string[]) {
 async function updateCall(identifiers: string[], values: Record<string, unknown>) {
   const supabase = getSupabaseAdmin();
   if (supabase && identifiers.length) await supabase.from('calls').update(values).in('telnyx_call_id', identifiers);
+}
+
+function payloadValue(payload: any, ...keys: string[]) {
+  for (const key of keys) {
+    const value = payload?.[key];
+    if (typeof value === 'string' && value) return value;
+  }
+  return '';
+}
+
+async function ensureInboundCall(identifiers: string[], payload: any) {
+  const supabase = getSupabaseAdmin();
+  if (!supabase || !identifiers.length || await findCall(identifiers)) return;
+
+  const toNumber = payloadValue(payload, 'To', 'to', 'called_number', 'destination');
+  const fromNumber = payloadValue(payload, 'From', 'from', 'caller_number', 'originating_number');
+  if (!toNumber) return;
+
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('telnyx_phone_number, inbound_agent_id')
+    .eq('id', 'default')
+    .maybeSingle();
+  if (
+    !settings?.inbound_agent_id ||
+    normalizePhoneNumber(toNumber) !== normalizePhoneNumber(settings.telnyx_phone_number || '')
+  ) return;
+
+  await supabase.from('calls').upsert({
+    id: identifiers[0],
+    telnyx_call_id: identifiers[0],
+    agent_id: settings.inbound_agent_id,
+    direction: 'inbound',
+    from_number: fromNumber || null,
+    to_number: toNumber,
+    status: 'ringing',
+    started_at: new Date().toISOString(),
+  }, { onConflict: 'id' });
 }
 
 async function updateContact(identifiers: string[], status: string) {
@@ -108,6 +147,7 @@ export async function POST(request: Request) {
     const identifiers = callIdentifiers(payload);
     if (!eventType || !identifiers.length) return NextResponse.json({ received: true });
     if (useMockServices) console.info(`[Webhook mock] ${eventType}: ${identifiers[0]}`);
+    await ensureInboundCall(identifiers, payload);
 
     if (eventType === 'call.initiated') await updateCall(identifiers, { status: 'ringing', started_at: new Date().toISOString() });
     if (eventType === 'call.answered') {

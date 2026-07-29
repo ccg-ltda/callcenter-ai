@@ -51,7 +51,12 @@ export async function PUT(request: Request) {
       goal: agent.goal || undefined,
     }, agent.telnyx_assistant_id);
 
-    await telnyxService.assignNumberToAssistant(settings.telnyx_phone_number, assistant.id);
+    const statusCallbackUrl = new URL('/api/telnyx/webhook', request.url).toString();
+    await telnyxService.assignNumberToAssistant(
+      settings.telnyx_phone_number,
+      assistant.id,
+      statusCallbackUrl,
+    );
 
     const { error: agentUpdateError } = await supabase
       .from('agents')
