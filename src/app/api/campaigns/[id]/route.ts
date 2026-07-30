@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRow } from '@/lib/server/supabaseRows';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   const { id } = await params;
   if (useMockServices) return NextResponse.json({ id, name: 'Campaña demo', status: 'draft' });
   const { data, error } = await getSupabaseAdmin()!.from('campaigns').select('*').eq('id', id).maybeSingle();
@@ -12,6 +15,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { id } = await params; const body = await request.json();
     if (useMockServices) return NextResponse.json({ success: true, campaign: { id, ...body } });
@@ -26,7 +31,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 }
 
-export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { id } = await params;
     if (useMockServices) return NextResponse.json({ success: true, id });

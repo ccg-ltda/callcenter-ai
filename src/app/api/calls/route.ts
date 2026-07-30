@@ -3,8 +3,11 @@ import { mockCalls } from '@/lib/mockData';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRow } from '@/lib/server/supabaseRows';
 import { reconcileRecentInboundCalls } from '@/lib/server/inboundCallSync';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   const params = new URL(request.url).searchParams;
   const campaignId = params.get('campaignId'); const status = params.get('status');
   if (useMockServices) return NextResponse.json(mockCalls.filter((call) => (!campaignId || call.campaignId === campaignId) && (!status || call.status === status)));

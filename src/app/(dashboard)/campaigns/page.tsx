@@ -2,14 +2,27 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import type { LucideIcon } from 'lucide-react';
 import { 
-  Compass, Plus, Rocket, ChevronRight, MoreHorizontal,
+  Compass, Plus, Rocket, ChevronRight,
   PhoneCall, CalendarCheck, DollarSign, Users, Loader2,
   PauseCircle, CheckCircle2, Clock, Trash2
 } from 'lucide-react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@/components/ui';
+import { Card, CardContent, Button } from '@/components/ui';
 
-const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
+interface Campaign {
+  id: string;
+  name: string;
+  status: string;
+  totalContacts: number;
+  callsMade: number;
+  meetingsBooked: number;
+  totalCostUsd: number;
+  createdAt?: string;
+  launchedAt?: string;
+}
+
+const STATUS_MAP: Record<string, { label: string; color: string; icon: LucideIcon }> = {
   draft:    { label: 'Borrador', color: 'text-muted-foreground bg-muted/50 border-zinc-700/50', icon: Clock },
   active:   { label: 'Activa', color: 'text-[#3b82f6] bg-[#3b82f6]/10 border-[#3b82f6]/25', icon: Rocket },
   paused:   { label: 'Pausada', color: 'text-amber-400 bg-amber-500/10 border-amber-500/25', icon: PauseCircle },
@@ -17,7 +30,7 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
 };
 
 export default function CampaignsPage() {
-  const [campaigns, setCampaigns] = useState<any[]>([]);
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -36,7 +49,10 @@ export default function CampaignsPage() {
     }
   };
 
-  useEffect(() => { loadCampaigns(); }, []);
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadCampaigns(), 0);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const handleLaunch = async (id: string) => {
     setLaunching(id);
@@ -46,8 +62,8 @@ export default function CampaignsPage() {
       if (!res.ok) throw new Error(data.error || 'Error al lanzar');
       alert(data.message);
       loadCampaigns();
-    } catch (e: any) {
-      alert(e.message || 'Error al lanzar la campaña');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al lanzar la campaña');
     } finally {
       setLaunching(null);
     }

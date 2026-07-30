@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { exchangeGoogleCode } from '@/lib/server/calendarService';
 import { getSupabaseAdmin } from '@/lib/server/supabaseAdmin';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
+import { encryptSensitiveValue } from '@/lib/server/sensitiveData';
 
 export async function GET(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -20,7 +24,8 @@ export async function GET(request: NextRequest) {
     if (!tokens.refresh_token) throw new Error('Google no devolvió refresh token. Revoca el acceso previo y vuelve a conectar.');
     const supabase = getSupabaseAdmin();
     if (!supabase) throw new Error('Supabase no está configurado.');
-    const { error } = await supabase.from('settings').upsert({ id: 'default', google_calendar_connected: true, google_refresh_token: tokens.refresh_token, updated_at: new Date().toISOString() });
+    const encryptedRefreshToken = encryptSensitiveValue(tokens.refresh_token, 'google-refresh-token');
+    const { error } = await supabase.from('settings').upsert({ id: 'default', google_calendar_connected: true, google_refresh_token: encryptedRefreshToken, updated_at: new Date().toISOString() });
     if (error) throw error;
     destination.searchParams.set('google', 'connected');
   } catch (error) {

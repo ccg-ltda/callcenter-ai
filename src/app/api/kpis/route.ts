@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { mockKpis } from '@/lib/mockData';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   if (useMockServices) return NextResponse.json(mockKpis);
   const supabase = getSupabaseAdmin();
   const [{ data: calls, error: callsError }, { data: transcripts }, { data: meetings }, { data: daily }] = await Promise.all([

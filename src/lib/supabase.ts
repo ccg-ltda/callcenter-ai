@@ -1,9 +1,9 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-let supabaseInstance: any;
+let supabaseInstance: SupabaseClient;
 
 if (supabaseUrl && supabaseAnonKey) {
   try {
@@ -16,7 +16,7 @@ if (supabaseUrl && supabaseAnonKey) {
   supabaseInstance = createSupabaseMockProxy();
 }
 
-function createSupabaseMockProxy() {
+function createSupabaseMockProxy(): SupabaseClient {
   console.warn('[SUPABASE WARNING] NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY is missing. Supabase client running in Mock/Proxy mode.');
   return new Proxy({}, {
     get(target, prop) {
@@ -41,7 +41,7 @@ function createSupabaseMockProxy() {
         };
       };
     }
-  });
+  }) as SupabaseClient;
 }
 
 export const supabase = supabaseInstance;

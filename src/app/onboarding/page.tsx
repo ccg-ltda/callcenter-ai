@@ -11,9 +11,7 @@ import {
   ArrowLeft, 
   Check, 
   Loader2, 
-  Search, 
-  CheckCircle,
-  HelpCircle
+  Search
 } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { 
@@ -40,9 +38,6 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
 
-  // --- STEP 1: Telnyx API Key ---
-  const [telnyxApiKey, setTelnyxApiKey] = useState('');
-
   // --- STEP 2: Phone Number Selection ---
   const [searchCountry, setSearchCountry] = useState('US');
   const [searchAdministrativeArea, setSearchAdministrativeArea] = useState('FL');
@@ -58,8 +53,8 @@ export default function OnboardingPage() {
   const [agentScript, setAgentScript] = useState(
     'Hola, soy el agente de IA de Contact Center IA. Te llamo para saber si te gustaría agendar una reunión comercial esta semana. ¿Tienes 15 minutos disponibles el jueves por la mañana?'
   );
-  const [agentGoal, setAgentGoal] = useState('agendar_reunion');
-  const [meetingDuration, setMeetingDuration] = useState(15);
+  const [agentGoal] = useState('agendar_reunion');
+  const [meetingDuration] = useState(15);
 
   // --- STEP 4: Google Calendar ---
   const [googleConnected, setGoogleConnected] = useState(false);
@@ -159,7 +154,6 @@ export default function OnboardingPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          telnyxApiKey: telnyxApiKey || 'mock_api_key_xxxxxxxx',
           telnyxPhoneNumber: selectedNumber || '+18005550199',
           telnyxAssistantId: 'mock_assistant_123',
           googleCalendarConnected: googleConnected,
@@ -211,12 +205,11 @@ export default function OnboardingPage() {
           />
 
           {[
-            { step: 1, label: 'Telnyx', icon: Key },
-            { step: 2, label: 'Número', icon: Phone },
-            { step: 3, label: 'Agente', icon: Bot },
-            { step: 4, label: 'Google', icon: Calendar },
+            { step: 1, label: 'Telnyx' },
+            { step: 2, label: 'Número' },
+            { step: 3, label: 'Agente' },
+            { step: 4, label: 'Google' },
           ].map((item) => {
-            const Icon = item.icon;
             const isCompleted = currentStep > item.step;
             const isActive = currentStep === item.step;
             
@@ -245,31 +238,24 @@ export default function OnboardingPage() {
 
         {/* Steps Cards */}
         <Card className="shadow-2xl">
-          {/* STEP 1: TELNYX API KEY */}
+          {/* STEP 1: TELNYX SERVER CONFIGURATION */}
           {currentStep === 1 && (
             <>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Key className="text-[#3b82f6]" size={20} />
-                  Paso 1: Conectar API Key de Telnyx
+                  Paso 1: Verificar configuración de Telnyx
                 </CardTitle>
                 <CardDescription>
-                  Necesitamos tu API Key para poder comunicarnos con Telnyx, buscar números y levantar los asistentes de voz.
+                  Las credenciales se mantienen fuera del navegador y de la base de datos.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="apiKey">Telnyx API Key</Label>
-                  <Input
-                    id="apiKey"
-                    type="password"
-                    placeholder="KEYxxxxxxxxxxxxxxxxxxxxxxxx"
-                    value={telnyxApiKey}
-                    onChange={(e) => setTelnyxApiKey(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Si no tienes una API Key o quieres probar de forma segura, déjalo en blanco y utilizaremos credenciales de prueba en el modo simulación.
-                  </p>
+                <div className="rounded-lg border border-[#3b82f6]/25 bg-[#3b82f6]/10 p-4 text-sm text-muted-foreground">
+                  Configura <code className="text-foreground">TELNYX_API_KEY</code>,{' '}
+                  <code className="text-foreground">TELNYX_PUBLIC_KEY</code> y{' '}
+                  <code className="text-foreground">TELNYX_WEBHOOK_SECRET</code> en el entorno del deployment.
+                  Si el modo simulación está activo, puedes continuar sin consumir saldo.
                 </div>
               </CardContent>
               <CardFooter className="justify-end gap-3">

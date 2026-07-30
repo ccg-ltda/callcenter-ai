@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRow, camelizeRows } from '@/lib/server/supabaseRows';
 import { telnyxService } from '@/lib/telnyxService';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   if (useMockServices) return NextResponse.json([]);
   const { data, error } = await getSupabaseAdmin()!.from('agents').select('*').order('created_at', { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -11,6 +14,8 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const body = await request.json();
     const { id, name, voice, script, goal, meetingDurationMin } = body;

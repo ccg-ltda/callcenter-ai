@@ -112,7 +112,11 @@ export default function CSVImporter({ campaignId, onImportComplete }: CSVImporte
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           campaignId,
-          contacts: validContacts.map(({ _isValid, _error, ...c }) => c),
+          contacts: validContacts.map((contact) => ({
+            fullName: contact.fullName,
+            phone: contact.phone,
+            company: contact.company,
+          })),
         }),
       });
 
@@ -120,8 +124,8 @@ export default function CSVImporter({ campaignId, onImportComplete }: CSVImporte
       const data = await res.json();
       setImported(true);
       onImportComplete(data.imported);
-    } catch (error: any) {
-      alert(error.message || 'Error al importar');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al importar');
     } finally {
       setImporting(false);
     }

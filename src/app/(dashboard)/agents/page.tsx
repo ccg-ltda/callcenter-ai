@@ -1,18 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Bot, 
-  Plus, 
-  PhoneCall, 
-  MessageSquare, 
-  Calendar, 
-  Check, 
-  Loader2, 
-  Play, 
-  AlertCircle,
-  HelpCircle
-} from 'lucide-react';
+import { Plus, PhoneCall, Loader2, Play, AlertCircle } from 'lucide-react';
 import { 
   Card, 
   CardHeader, 
@@ -27,8 +16,17 @@ import {
   Textarea 
 } from '@/components/ui';
 
+interface Agent {
+  id: string;
+  name: string;
+  voice: string;
+  script: string;
+  goal?: string;
+  meetingDurationMin?: number;
+}
+
 export default function AgentsPage() {
-  const [agentsList, setAgentsList] = useState<any[]>([]);
+  const [agentsList, setAgentsList] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [calling, setCalling] = useState(false);
@@ -70,7 +68,8 @@ export default function AgentsPage() {
   };
 
   useEffect(() => {
-    loadAgents();
+    const timer = window.setTimeout(() => void loadAgents(), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   // Handle Form Submit to create/edit Agent
@@ -111,15 +110,15 @@ export default function AgentsPage() {
       
       // Reload list
       loadAgents();
-    } catch (error: any) {
-      alert(error.message || 'Error al guardar');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al guardar');
     } finally {
       setSaving(false);
     }
   };
 
   // Select agent to edit
-  const handleEdit = (agent: any) => {
+  const handleEdit = (agent: Agent) => {
     setAgentId(agent.id);
     setAgentName(agent.name);
     setAgentVoice(agent.voice);
@@ -154,8 +153,8 @@ export default function AgentsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Error al iniciar la llamada');
       alert(`Llamada iniciada con éxito. ${data.message}`);
-    } catch (error: any) {
-      alert(error.message || 'Error al disparar llamada');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al disparar llamada');
     } finally {
       setCalling(false);
     }
@@ -209,7 +208,7 @@ export default function AgentsPage() {
                           Voz: {voiceOptions.find(o => o.value === agent.voice)?.label || agent.voice} • Duración: {agent.meetingDurationMin || 15} min
                         </p>
                         <p className="text-xs text-muted-foreground italic leading-relaxed line-clamp-2">
-                          "{agent.script}"
+                          &ldquo;{agent.script}&rdquo;
                         </p>
                       </div>
                       <Button 

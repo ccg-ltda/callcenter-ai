@@ -2,8 +2,9 @@ import 'server-only';
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
-export const AUTH_COOKIE_NAME = 'callcenter_session';
-export const AUTH_SESSION_MAX_AGE = 60 * 60 * 12;
+export const AUTH_COOKIE_NAME =
+  process.env.NODE_ENV === 'production' ? '__Host-callcenter_session' : 'callcenter_session';
+export const AUTH_SESSION_MAX_AGE = 60 * 60 * 8;
 
 function getCredentials() {
   return {
@@ -41,6 +42,10 @@ export function getAuthConfigurationIssue() {
 
   if (secret.length < 32) {
     return `AUTH_SECRET tiene ${secret.length} caracteres y debe tener al menos 32.`;
+  }
+
+  if (password.length < 12) {
+    return 'AUTH_PASSWORD debe tener al menos 12 caracteres.';
   }
 
   return null;

@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRow } from '@/lib/server/supabaseRows';
 import { validatePhoneNumber } from '@/lib/phoneNumbers';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { id } = await params;
     const body = await request.json();

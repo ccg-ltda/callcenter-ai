@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { camelizeRow } from '@/lib/server/supabaseRows';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { isGoogleAppsScriptConfigured } from '@/lib/server/calendarService';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 const defaults = {
   id: 'default', telnyx_phone_number: '', telnyx_assistant_id: '', inbound_agent_id: null, google_calendar_connected: false,
@@ -11,17 +12,20 @@ const defaults = {
 function safeSettings(row: Record<string, unknown>) {
   const { google_refresh_token, telnyx_api_key, ...safe } = row;
   void google_refresh_token;
+  void telnyx_api_key;
   const appsScriptConfigured = isGoogleAppsScriptConfigured();
   const oauthConnected = Boolean(safe.google_calendar_connected);
   return {
     ...camelizeRow(safe),
     googleCalendarConnected: appsScriptConfigured || oauthConnected,
     googleCalendarProvider: appsScriptConfigured ? 'apps-script' : oauthConnected ? 'oauth' : null,
-    telnyxApiKeyConfigured: Boolean(telnyx_api_key || process.env.TELNYX_API_KEY),
+    telnyxApiKeyConfigured: Boolean(process.env.TELNYX_API_KEY),
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   if (useMockServices) return NextResponse.json({ ...camelizeRow(defaults), googleCalendarProvider: 'mock', telnyxApiKeyConfigured: true });
   const supabase = getSupabaseAdmin()!;
   let { data, error } = await supabase.from('settings').select('*').eq('id', 'default').maybeSingle();
@@ -35,16 +39,16 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const body = await request.json();
     if (useMockServices) return NextResponse.json({ success: true, settings: body });
     const values: Record<string, unknown> = { id: 'default', updated_at: new Date().toISOString() };
-    if (body.telnyxApiKey) values.telnyx_api_key = body.telnyxApiKey;
     if (body.telnyxPhoneNumber !== undefined) values.telnyx_phone_number = body.telnyxPhoneNumber;
     if (body.telnyxAssistantId !== undefined) values.telnyx_assistant_id = body.telnyxAssistantId;
     if (body.inboundAgentId !== undefined) values.inbound_agent_id = body.inboundAgentId || null;
     if (body.googleCalendarConnected !== undefined) values.google_calendar_connected = body.googleCalendarConnected;
-    if (body.googleRefreshToken !== undefined) values.google_refresh_token = body.googleRefreshToken;
     if (body.callWindowStart !== undefined) values.call_window_start = body.callWindowStart;
     if (body.callWindowEnd !== undefined) values.call_window_end = body.callWindowEnd;
     if (body.timezone !== undefined) values.timezone = body.timezone;

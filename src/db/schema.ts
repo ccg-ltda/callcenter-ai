@@ -109,3 +109,15 @@ export const dailyMetrics = pgTable('daily_metrics', {
   minutesTalked: real('minutes_talked').default(0),
   costUsd: real('cost_usd').default(0),
 });
+
+// Controles operativos de seguridad. No deben exponerse a anon/authenticated.
+export const processedWebhookEvents = pgTable('processed_webhook_events', {
+  id: text('id').primaryKey(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const securityRateLimits = pgTable('security_rate_limits', {
+  key: text('key').primaryKey(),
+  attempts: integer('attempts').default(0).notNull(),
+  windowStartedAt: timestamp('window_started_at', { withTimezone: true }).defaultNow().notNull(),
+});

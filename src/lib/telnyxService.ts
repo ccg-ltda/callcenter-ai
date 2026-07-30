@@ -1,5 +1,7 @@
-import Telnyx from 'telnyx';
+import 'server-only';
+
 import { normalizePhoneNumber, validatePhoneNumber } from '@/lib/phoneNumbers';
+import { secureTelnyxCallbackUrl } from '@/lib/server/telnyxWebhook';
 
 const apiKey = process.env.TELNYX_API_KEY || '';
 const isMock = process.env.NEXT_PUBLIC_USE_MOCK_SERVICES === 'true' || !apiKey;
@@ -34,16 +36,6 @@ function normalizeVoice(voice: string) {
   return legacyVoices[voice] || voice;
 }
 
-// Initialize Telnyx client if not in mock mode
-let telnyxClient: any = null;
-if (!isMock) {
-  try {
-    telnyxClient = new Telnyx(apiKey as any);
-  } catch (error) {
-    console.error('Failed to initialize Telnyx SDK:', error);
-  }
-}
-
 export interface AgentConfig {
   name: string;
   voice: string;
@@ -73,6 +65,24 @@ export type TelnyxConversation = {
     from?: string;
     call_control_id?: string;
     telnyx_conversation_channel?: string;
+  };
+};
+
+type TelnyxErrorBody = {
+  errors?: Array<{ detail?: string; title?: string; code?: string }> | {
+    detail?: string;
+  };
+  error?: string;
+  message?: string;
+  detail?: string;
+};
+
+type TelnyxAvailableNumber = {
+  phone_number?: string;
+  number_type?: string;
+  cost_information?: {
+    monthly_cost?: string;
+    upfront_cost?: string;
   };
 };
 
@@ -135,9 +145,9 @@ export const telnyxService = {
   async readErrorDetails(response: Response) {
     const fallback = response.statusText || `HTTP ${response.status}`;
     try {
-      const data = await response.json();
+      const data = await response.json() as TelnyxErrorBody;
       const details = Array.isArray(data?.errors)
-        ? data.errors.map((err: any) => err?.detail || err?.title || err?.code).filter(Boolean).join(' | ')
+        ? data.errors.map((err) => err?.detail || err?.title || err?.code).filter(Boolean).join(' | ')
         : data?.errors?.detail || data?.error || data?.message || data?.detail;
       return details ? `${fallback}: ${details}` : fallback;
     } catch {
@@ -198,8 +208,8 @@ export const telnyxService = {
         throw new Error(details);
       }
       
-      const data = await response.json();
-      return (data.data || []).map((num: any) => ({
+      const data = await response.json() as { data?: TelnyxAvailableNumber[] };
+      return (data.data || []).map((num) => ({
         phoneNumber: num.phone_number,
         type: num.number_type || 'local',
         priceMonthly: num.cost_information?.monthly_cost || num.cost_information?.upfront_cost || 'Consultar',
@@ -340,8 +350,10 @@ export const telnyxService = {
   async ensureTexmlApplication() {
     if (connectionId) return connectionId;
 
-    const voiceUrl = process.env.TELNYX_TEXML_VOICE_URL || 'https://callcenter-ai-tau.vercel.app/api/telnyx/texml';
-    const webhookUrl = process.env.TELNYX_WEBHOOK_URL || new URL('/api/telnyx/webhook', voiceUrl).toString();
+    const voiceBaseUrl = process.env.TELNYX_TEXML_VOICE_URL || 'https://callcenter-ai-tau.vercel.app/api/telnyx/texml';
+    const webhookBaseUrl = process.env.TELNYX_WEBHOOK_URL || new URL('/api/telnyx/webhook', voiceBaseUrl).toString();
+    const voiceUrl = secureTelnyxCallbackUrl(voiceBaseUrl);
+    const webhookUrl = secureTelnyxCallbackUrl(webhookBaseUrl);
 
     const listParams = new URLSearchParams({
       'filter[friendly_name]': texmlApplicationName,

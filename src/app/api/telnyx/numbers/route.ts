@@ -1,7 +1,10 @@
 import { NextResponse } from 'next/server';
 import { telnyxService } from '@/lib/telnyxService';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const params = new URL(request.url).searchParams;
     const country = params.get('country') || 'CO';
@@ -14,6 +17,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { phoneNumber } = await request.json();
     if (!phoneNumber) return NextResponse.json({ error: 'phoneNumber es requerido.' }, { status: 400 });

@@ -15,10 +15,11 @@ export function normalizeTranscript(raw: unknown): TranscriptTurn[] {
   if (!Array.isArray(raw)) return [];
 
   return (raw as RawTranscriptTurn[])
+    .slice(-200)
     .filter((turn) => !turn.role || ['assistant', 'agent', 'user'].includes(turn.role))
     .map((turn) => ({
       role: (turn.role === 'assistant' || turn.role === 'agent' || turn.from === 'ai' ? 'agent' : 'user') as 'agent' | 'user',
-      text: turn.text || turn.content || turn.transcript || '',
+      text: (turn.text || turn.content || turn.transcript || '').slice(0, 4_000),
       timestamp: turn.timestamp || turn.sent_at || turn.created_at || new Date().toISOString(),
     }))
     .filter((turn) => turn.text.trim().length > 0)

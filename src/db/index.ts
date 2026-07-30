@@ -1,10 +1,12 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { drizzle, type PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
 import * as schema from './schema';
 
 const connectionString = process.env.DATABASE_URL;
 
-let dbInstance: any;
+type Database = PostgresJsDatabase<typeof schema>;
+
+let dbInstance: Database;
 
 if (connectionString && connectionString !== '') {
   try {
@@ -18,7 +20,7 @@ if (connectionString && connectionString !== '') {
   dbInstance = createDbMockProxy();
 }
 
-function createDbMockProxy() {
+function createDbMockProxy(): Database {
   console.warn('[DB WARNING] DATABASE_URL is not defined. Drizzle ORM client running in Mock/Proxy mode.');
   return new Proxy({}, {
     get(target, prop) {
@@ -34,7 +36,7 @@ function createDbMockProxy() {
         };
       };
     }
-  });
+  }) as Database;
 }
 
 export const db = dbInstance;

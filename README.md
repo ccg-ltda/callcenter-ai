@@ -21,7 +21,9 @@ Abre [http://localhost:3000](http://localhost:3000).
 4. Para Calendar, despliega `google-apps-script/Code.gs` como Web App y configura `GOOGLE_APPS_SCRIPT_URL` y `GOOGLE_APPS_SCRIPT_SECRET`.
 5. En produccion usa `NEXT_PUBLIC_USE_MOCK_SERVICES=false`.
 
-Las bases existentes deben actualizarse desde Supabase SQL Editor con la migración SQL correspondiente. El despliegue de Vercel no ejecuta automáticamente el historial completo de Drizzle, evitando recrear tablas existentes.
+Las bases existentes deben actualizarse desde Supabase SQL Editor con la migración
+[`drizzle/0002_security_hardening.sql`](drizzle/0002_security_hardening.sql). El despliegue
+de Vercel no ejecuta automáticamente el historial de Drizzle.
 
 ### Acceso privado
 
@@ -29,10 +31,43 @@ El panel y sus APIs estan protegidos por un login administrativo. Configura esta
 
 ```env
 AUTH_USERNAME=tu_usuario
-AUTH_PASSWORD=una_contrasena_larga_y_unica
+AUTH_PASSWORD=una_contrasena_larga_y_unica_de_12_o_mas_caracteres
 AUTH_SECRET=un_valor_aleatorio_de_al_menos_32_caracteres
 ```
 
-`AUTH_SECRET` firma la cookie privada de sesion y no debe compartirse ni publicarse. Las sesiones duran 12 horas. Los endpoints de webhook y TeXML de Telnyx permanecen publicos para que Telnyx pueda comunicarse con la aplicacion.
+`AUTH_SECRET` firma la cookie privada de sesión y no debe compartirse ni publicarse.
+Las sesiones duran 8 horas. Cada API privada vuelve a validar la sesión, además de la
+protección de navegación.
+
+### Despliegue del endurecimiento de seguridad
+
+Antes de ejecutar la migración o desplegar, configura en el entorno:
+
+```env
+TELNYX_API_KEY=...
+TELNYX_PUBLIC_KEY=...
+TELNYX_WEBHOOK_SECRET=un_valor_aleatorio_de_al_menos_32_caracteres
+TOKEN_ENCRYPTION_KEY=un_valor_aleatorio_de_al_menos_32_caracteres
+```
+
+`TELNYX_PUBLIC_KEY` es la clave pública Ed25519 disponible en el portal de Telnyx.
+`TELNYX_WEBHOOK_SECRET` protege las URLs de callback generadas por la aplicación.
+`TOKEN_ENCRYPTION_KEY` cifra tokens persistidos; si se omite se deriva una clave de
+`AUTH_SECRET`, por lo que no debe rotarse sin planificar la migración de los tokens.
+
+Orden recomendado:
+
+1. Configura las variables anteriores, incluyendo `TELNYX_API_KEY`.
+2. Ejecuta `drizzle/0002_security_hardening.sql` en Supabase. Esta migración activa RLS,
+   revoca acceso de clientes, crea rate limiting e idempotencia, y elimina la copia
+   heredada de la clave Telnyx guardada en `settings`.
+3. Despliega la aplicación.
+4. Vuelve a activar el enrutamiento entrante o actualiza la aplicación de voz en Telnyx
+   para que sus callbacks usen las nuevas URLs protegidas.
+
+Los webhooks y TeXML siguen siendo accesibles por Telnyx, pero ahora requieren la firma
+Ed25519 oficial o el token de callback generado por el servidor. Los refresh tokens
+heredados de Google se cifran de forma diferida la próxima vez que se cree un evento;
+las conexiones nuevas se guardan cifradas desde el inicio.
 
 Nunca subas `.env.local`; Git lo excluye deliberadamente.

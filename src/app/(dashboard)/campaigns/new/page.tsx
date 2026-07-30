@@ -4,12 +4,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Plus, Loader2, Bot } from 'lucide-react';
 import Link from 'next/link';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Button, Input, Label, Select } from '@/components/ui';
+import { Card, CardContent, CardFooter, Button, Input, Label, Select } from '@/components/ui';
+
+interface AgentOption {
+  id: string;
+  name: string;
+  voice: string;
+}
 
 export default function NewCampaignPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
-  const [agents, setAgents] = useState<any[]>([]);
+  const [agents, setAgents] = useState<AgentOption[]>([]);
   const [name, setName] = useState('');
   const [agentId, setAgentId] = useState('');
 
@@ -37,8 +43,8 @@ export default function NewCampaignPage() {
       if (!res.ok) throw new Error('Error al crear campaña');
       const data = await res.json();
       router.push(`/campaigns/${data.campaign?.id || id}`);
-    } catch (e: any) {
-      alert(e.message || 'Error al crear campaña');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al crear campaña');
     } finally {
       setSaving(false);
     }

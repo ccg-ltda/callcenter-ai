@@ -80,7 +80,8 @@ export default function NumbersPage() {
   };
 
   useEffect(() => {
-    loadCurrentNumber();
+    const timer = window.setTimeout(() => void loadCurrentNumber(), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const handleSaveInbound = async () => {
@@ -159,8 +160,8 @@ export default function NumbersPage() {
       alert(`Número ${number} adquirido y configurado como número saliente.`);
       setCurrentNumber(number);
       setAvailableNumbers([]);
-    } catch (error: any) {
-      alert(error.message || 'Error al comprar número');
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al comprar número');
     } finally {
       setBuying(false);
     }

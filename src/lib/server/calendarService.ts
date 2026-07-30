@@ -1,6 +1,11 @@
 import 'server-only';
 
 import { getSupabaseAdmin, useMockServices } from './supabaseAdmin';
+import {
+  decryptSensitiveValue,
+  encryptSensitiveValue,
+  isSensitiveValueEncrypted,
+} from './sensitiveData';
 
 const GOOGLE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 
@@ -100,7 +105,19 @@ export async function createCalendarEvent(input: CalendarEventInput) {
   const { data: settings, error } = await supabase!.from('settings').select('google_refresh_token').eq('id', 'default').single();
   if (error || !settings?.google_refresh_token) throw new Error('Google Calendar no está conectado.');
 
-  const accessToken = await getGoogleAccessToken(settings.google_refresh_token);
+  const refreshToken = decryptSensitiveValue(
+    settings.google_refresh_token,
+    'google-refresh-token',
+  );
+  if (!isSensitiveValueEncrypted(settings.google_refresh_token)) {
+    const encrypted = encryptSensitiveValue(refreshToken, 'google-refresh-token');
+    const { error: migrationError } = await supabase!
+      .from('settings')
+      .update({ google_refresh_token: encrypted, updated_at: new Date().toISOString() })
+      .eq('id', 'default');
+    if (migrationError) throw migrationError;
+  }
+  const accessToken = await getGoogleAccessToken(refreshToken);
   const start = new Date(input.scheduledAt);
   const end = new Date(start.getTime() + input.durationMin * 60_000);
   const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {

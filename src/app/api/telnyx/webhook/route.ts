@@ -3,12 +3,70 @@ import { createCalendarEvent, isGoogleAppsScriptConfigured } from '@/lib/server/
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { syncCallTranscript } from '@/lib/server/transcriptSync';
 import { normalizePhoneNumber } from '@/lib/phoneNumbers';
+import { approvedAutomatedMeetingDate } from '@/lib/server/meetingSafety';
+import { readTelnyxBody, verifyTelnyxRequest } from '@/lib/server/telnyxWebhook';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+const recentWebhookEvents = new Map<string, number>();
+
 function callIdentifiers(payload: any) {
   return [payload.call_control_id, payload.call_leg_id, payload.call_session_id, payload.call_sid, payload.CallSid, payload.CallSidLegacy]
-    .filter((value, index, values): value is string => typeof value === 'string' && value.length > 0 && values.indexOf(value) === index);
+    .filter((value, index, values): value is string =>
+      typeof value === 'string' &&
+      value.length > 0 &&
+      value.length <= 256 &&
+      values.indexOf(value) === index);
+}
+
+function safeRecordingUrl(value: unknown) {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeDuration(value: unknown) {
+  const duration = Number(value);
+  if (!Number.isFinite(duration)) return 0;
+  return Math.min(86_400, Math.max(0, Math.round(duration)));
+}
+
+async function claimWebhookEvent(eventId: unknown) {
+  if (typeof eventId !== 'string' || !eventId || eventId.length > 256) return true;
+  const now = Date.now();
+  for (const [id, expiresAt] of recentWebhookEvents) {
+    if (expiresAt <= now) recentWebhookEvents.delete(id);
+  }
+  if (recentWebhookEvents.has(eventId)) return false;
+
+  const supabase = getSupabaseAdmin();
+  if (!supabase) {
+    recentWebhookEvents.set(eventId, now + 10 * 60_000);
+    return true;
+  }
+  const { error } = await supabase.from('processed_webhook_events').insert({ id: eventId });
+  if (!error) {
+    recentWebhookEvents.set(eventId, now + 10 * 60_000);
+    return true;
+  }
+  if (error.code === '23505') return false;
+  if (['42P01', 'PGRST205'].includes(error.code || '')) {
+    console.warn('[Telnyx Webhook] Persistent idempotency table is not migrated; using memory.');
+    recentWebhookEvents.set(eventId, now + 10 * 60_000);
+    return true;
+  }
+  throw error;
+}
+
+async function releaseWebhookEvent(eventId: unknown) {
+  if (typeof eventId !== 'string' || !eventId) return;
+  recentWebhookEvents.delete(eventId);
+  const supabase = getSupabaseAdmin();
+  if (supabase) await supabase.from('processed_webhook_events').delete().eq('id', eventId);
 }
 
 async function findCall(identifiers: string[]) {
@@ -96,11 +154,12 @@ async function handleConversationEnded(identifiers: string[], payload: any) {
   if (!call) return;
 
   const { data: settings } = await supabase.from('settings').select('timezone, google_calendar_connected').eq('id', 'default').single();
+  const recordingUrl = safeRecordingUrl(payload.recording_url || payload.media_url);
   await updateCall(identifiers, {
     status: 'completed',
     ended_at: new Date().toISOString(),
-    ...(payload.duration_sec ? { duration_seconds: Number(payload.duration_sec) } : {}),
-    ...(payload.recording_url || payload.media_url ? { recording_url: payload.recording_url || payload.media_url } : {}),
+    ...(payload.duration_sec ? { duration_seconds: safeDuration(payload.duration_sec) } : {}),
+    ...(recordingUrl ? { recording_url: recordingUrl } : {}),
   });
   const synced = await syncCallTranscript(call.id, {
     conversationId: payload.conversation_id,
@@ -110,7 +169,11 @@ async function handleConversationEnded(identifiers: string[], payload: any) {
   if (!synced) return;
   const { summary } = synced;
   if (!call.contact_id || !call.campaign_id) return;
-  if (!summary.interested || !summary.proposedDateTime) return;
+  const scheduledAt = approvedAutomatedMeetingDate(
+    summary,
+    synced.transcript.full_transcript,
+  );
+  if (!scheduledAt) return;
 
   const meetingId = `mtg_${crypto.randomUUID()}`;
   let googleEventId: string | null = null;
@@ -119,14 +182,14 @@ async function handleConversationEnded(identifiers: string[], payload: any) {
       const event = await createCalendarEvent({
         title: `Reunión con ${call.contact?.full_name || 'contacto'}`,
         description: `Reunión agendada automáticamente por Contact Center IA.\n\n${summary.summary}`,
-        scheduledAt: summary.proposedDateTime, durationMin: 15, timezone: settings?.timezone || 'America/Bogota',
+        scheduledAt, durationMin: 15, timezone: settings?.timezone || 'America/Bogota',
       });
       googleEventId = event.id;
     } catch (error) {
       console.error('[Calendar] Meeting saved locally; Google event failed:', error);
     }
   }
-  await supabase.from('meetings').insert({ id: meetingId, call_id: call.id, contact_id: call.contact_id, scheduled_at: summary.proposedDateTime, duration_min: 15, google_event_id: googleEventId, status: 'scheduled' });
+  await supabase.from('meetings').insert({ id: meetingId, call_id: call.id, contact_id: call.contact_id, scheduled_at: scheduledAt, duration_min: 15, google_event_id: googleEventId, status: 'scheduled' });
   await supabase.from('contacts').update({ status: 'scheduled' }).eq('id', call.contact_id);
   await updateCall(identifiers, { outcome: 'meeting_booked' });
 
@@ -135,12 +198,19 @@ async function handleConversationEnded(identifiers: string[], payload: any) {
 }
 
 export async function POST(request: Request) {
+  let eventId: unknown;
   try {
+    const rawBody = await readTelnyxBody(request);
+    await verifyTelnyxRequest(request, rawBody);
     const contentType = request.headers.get('content-type') || '';
     const body = contentType.includes('application/json')
-      ? await request.json()
-      : Object.fromEntries((await request.formData()).entries());
+      ? JSON.parse(rawBody)
+      : Object.fromEntries(new URLSearchParams(rawBody).entries());
     const data = body.data || body;
+    eventId = data.id;
+    if (!await claimWebhookEvent(eventId)) {
+      return NextResponse.json({ received: true, duplicate: true });
+    }
     const callStatus = typeof data.CallStatus === 'string' ? data.CallStatus.toLowerCase() : '';
     const eventType = data.event_type || (callStatus === 'completed' ? 'call.hangup' : callStatus ? `call.${callStatus}` : data.record_type);
     const payload = data.payload || data;
@@ -156,7 +226,7 @@ export async function POST(request: Request) {
     }
     if (eventType === 'call.hangup') {
       const call = await findCall(identifiers);
-      const durationSeconds = Number(payload.duration_secs || payload.CallDuration || (call?.started_at ? Math.max(0, Math.round((Date.now() - new Date(call.started_at).getTime()) / 1000)) : 0));
+      const durationSeconds = safeDuration(payload.duration_secs || payload.CallDuration || (call?.started_at ? Math.max(0, Math.round((Date.now() - new Date(call.started_at).getTime()) / 1000)) : 0));
       const costUsd = Number(((durationSeconds / 60) * 0.006).toFixed(4));
       await updateCall(identifiers, { status: 'completed', ended_at: new Date().toISOString(), duration_seconds: durationSeconds, cost_usd: costUsd, outcome: payload.hangup_cause || (durationSeconds ? 'completed' : 'no_answer') });
       if (!durationSeconds) await updateContact(identifiers, 'no_answer');
@@ -174,8 +244,14 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({ received: true, event: eventType });
   } catch (error) {
+    await releaseWebhookEvent(eventId);
     console.error('[Telnyx Webhook]', error);
-    return NextResponse.json({ received: true, error: error instanceof Error ? error.message : 'Unknown error' });
+    const message = error instanceof Error ? error.message : '';
+    const status = message.includes('tamaño') ? 413
+      : message.includes('configurada') ? 503
+      : message.includes('JSON') ? 400
+      : 401;
+    return NextResponse.json({ error: 'Webhook de Telnyx rechazado.' }, { status });
   }
 }
 

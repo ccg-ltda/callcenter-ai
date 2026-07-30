@@ -2,10 +2,13 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRows } from '@/lib/server/supabaseRows';
 import { validatePhoneNumber } from '@/lib/phoneNumbers';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 type ImportedContact = { fullName?: string; nombre?: string; name?: string; phone?: string; telefono?: string; tel?: string; company?: string; empresa?: string; customFields?: unknown };
 
 export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   if (useMockServices) return NextResponse.json([]);
   const campaignId = new URL(request.url).searchParams.get('campaignId');
   let query = getSupabaseAdmin()!.from('contacts').select('*').order('created_at', { ascending: false });
@@ -16,6 +19,8 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const body = await request.json();
     const campaignId = body.campaignId as string;

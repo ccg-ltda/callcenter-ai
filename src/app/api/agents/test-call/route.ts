@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { telnyxService } from '@/lib/telnyxService';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 export async function POST(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { phoneNumber, agentId } = await request.json();
     if (!phoneNumber || !agentId) return NextResponse.json({ error: 'Faltan phoneNumber o agentId.' }, { status: 400 });

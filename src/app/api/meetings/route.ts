@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { mockMeetings } from '@/lib/mockData';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   const params = new URL(request.url).searchParams;
   if (useMockServices) return NextResponse.json(mockMeetings);
   const supabase = getSupabaseAdmin();

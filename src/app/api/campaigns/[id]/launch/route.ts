@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { telnyxService } from '@/lib/telnyxService';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 function isWithinCallWindow(start: string, end: string, timezone: string) {
   try {
@@ -10,7 +11,9 @@ function isWithinCallWindow(start: string, end: string, timezone: string) {
   } catch { return true; }
 }
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { id } = await params;
     if (useMockServices) return NextResponse.json({ success: true, message: 'Campaña lanzada en simulación.', callsQueued: 3 });

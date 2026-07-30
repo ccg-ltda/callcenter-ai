@@ -1,6 +1,6 @@
 import Sidebar from '@/components/Sidebar';
 import ThemeToggle from '@/components/ThemeToggle';
-import { ShieldCheck, PhoneCall, Calendar } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 
 export default function DashboardLayout({
   children,

@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { telnyxService } from '@/lib/telnyxService';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
+import { secureTelnyxCallbackUrl } from '@/lib/server/telnyxWebhook';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   if (useMockServices) {
     return NextResponse.json({ phoneNumber: '+18005550199', inboundAgentId: '' });
   }
@@ -21,6 +25,8 @@ export async function GET() {
 }
 
 export async function PUT(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { agentId } = await request.json();
     if (typeof agentId !== 'string' || !agentId) {
@@ -51,7 +57,9 @@ export async function PUT(request: Request) {
       goal: agent.goal || undefined,
     }, agent.telnyx_assistant_id);
 
-    const statusCallbackUrl = new URL('/api/telnyx/webhook', request.url).toString();
+    const statusCallbackUrl = secureTelnyxCallbackUrl(
+      process.env.TELNYX_WEBHOOK_URL || new URL('/api/telnyx/webhook', request.url).toString(),
+    );
     await telnyxService.assignNumberToAssistant(
       settings.telnyx_phone_number,
       assistant.id,

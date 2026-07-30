@@ -2,8 +2,11 @@ import { randomBytes } from 'crypto';
 import { NextResponse } from 'next/server';
 
 import { getGoogleAuthorizationUrl } from '@/lib/server/calendarService';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   if (process.env.NEXT_PUBLIC_USE_MOCK_SERVICES === 'true') {
     return NextResponse.redirect(new URL('/settings?google=connected', process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000'));
   }

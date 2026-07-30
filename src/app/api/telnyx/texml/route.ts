@@ -1,7 +1,9 @@
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { readTelnyxBody, verifyTelnyxRequest } from '@/lib/server/telnyxWebhook';
 
-function xmlResponse(content: string) {
+function xmlResponse(content: string, status = 200) {
   return new Response(`<?xml version="1.0" encoding="UTF-8"?><Response>${content}</Response>`, {
+    status,
     headers: {
       'Content-Type': 'application/xml; charset=utf-8',
       'Cache-Control': 'no-store',
@@ -19,24 +21,26 @@ function escapeXml(value: string) {
   })[character] || character);
 }
 
-async function requestParameters(request: Request) {
+function requestParameters(request: Request, rawBody: string) {
   const url = new URL(request.url);
   if (request.method === 'GET') return url.searchParams;
   const contentType = request.headers.get('content-type') || '';
   if (contentType.includes('application/json')) {
-    const body = await request.json();
+    const body = JSON.parse(rawBody);
     const params = new URLSearchParams();
     Object.entries(body || {}).forEach(([key, value]) => {
       if (typeof value === 'string') params.set(key, value);
     });
     return params;
   }
-  return new URLSearchParams(await request.text());
+  return new URLSearchParams(rawBody);
 }
 
 async function handleInboundCall(request: Request) {
   try {
-    const params = await requestParameters(request);
+    const rawBody = request.method === 'GET' ? '' : await readTelnyxBody(request);
+    await verifyTelnyxRequest(request, rawBody);
+    const params = requestParameters(request, rawBody);
     const callId = params.get('CallSid') || params.get('CallSidLegacy') || '';
     const fromNumber = params.get('From') || '';
     const toNumber = params.get('To') || '';
@@ -85,7 +89,10 @@ async function handleInboundCall(request: Request) {
     );
   } catch (error) {
     console.error('[Telnyx TeXML inbound]', error);
-    return xmlResponse('<Say language="es-CO">No pudimos conectar la llamada. Intenta nuevamente más tarde.</Say><Hangup />');
+    return xmlResponse(
+      '<Say language="es-CO">No pudimos conectar la llamada. Intenta nuevamente más tarde.</Say><Hangup />',
+      401,
+    );
   }
 }
 

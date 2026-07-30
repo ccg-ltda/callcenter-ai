@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import {
   ArrowLeft, Rocket, Users, PhoneCall, CalendarCheck, DollarSign,
-  Upload, Loader2, PauseCircle, CheckCircle2, Clock, Pencil, RefreshCw, AlertCircle
+  Upload, Loader2, CheckCircle2, Pencil, RefreshCw, AlertCircle
 } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, Button } from '@/components/ui';
 import CSVImporter from '@/components/CSVImporter';
@@ -28,8 +28,28 @@ const CONTACT_STATUS_MAP: Record<string, { label: string; color: string }> = {
 
 export default function CampaignDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [campaign, setCampaign] = useState<any>(null);
-  const [contacts, setContacts] = useState<any[]>([]);
+  interface Campaign {
+    name: string;
+    status: string;
+    totalContacts: number;
+    callsMade: number;
+    meetingsBooked: number;
+    totalCostUsd: number;
+    createdAt: string;
+    launchedAt?: string;
+  }
+
+  interface Contact {
+    id: string;
+    fullName: string;
+    phone: string;
+    company?: string;
+    status: string;
+    customFields?: { callError?: string };
+  }
+
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [launching, setLaunching] = useState(false);
   const [finishing, setFinishing] = useState(false);
@@ -37,7 +57,7 @@ export default function CampaignDetailPage() {
   const [showImporter, setShowImporter] = useState(false);
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const [campRes, contactsRes] = await Promise.all([
         fetch(`/api/campaigns/${id}`),
@@ -51,9 +71,13 @@ export default function CampaignDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
-  useEffect(() => { if (id) loadData(); }, [id]);
+  useEffect(() => {
+    if (!id) return;
+    const timer = window.setTimeout(() => void loadData(), 0);
+    return () => window.clearTimeout(timer);
+  }, [id, loadData]);
 
   const handleLaunch = async () => {
     setLaunching(true);
@@ -63,14 +87,14 @@ export default function CampaignDetailPage() {
       if (!res.ok) throw new Error(data.error || 'Error al lanzar');
       alert(data.message);
       loadData();
-    } catch (e: any) {
-      alert(e.message);
+    } catch (error: unknown) {
+      alert(error instanceof Error ? error.message : 'Error al lanzar');
     } finally {
       setLaunching(false);
     }
   };
 
-  const handleImportComplete = (count: number) => {
+  const handleImportComplete = () => {
     setShowImporter(false);
     loadData(); // Reload contacts
   };
@@ -98,7 +122,7 @@ export default function CampaignDetailPage() {
     }
   };
 
-  const handleCorrectPhone = async (contact: any) => {
+  const handleCorrectPhone = async (contact: Contact) => {
     const phone = window.prompt(
       `Corrige el teléfono de ${contact.fullName}. Incluye el código de país:`,
       contact.phone,

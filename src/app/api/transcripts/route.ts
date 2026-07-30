@@ -3,10 +3,13 @@ import { mockTranscripts } from '@/lib/mockData';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { reconcileRecentInboundCalls } from '@/lib/server/inboundCallSync';
 import { syncCallTranscript } from '@/lib/server/transcriptSync';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   if (useMockServices) return NextResponse.json(mockTranscripts);
   await reconcileRecentInboundCalls();
   const supabase = getSupabaseAdmin();

@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { telnyxService } from '@/lib/telnyxService';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     const { id } = await params;
     const { agentId } = await request.json();

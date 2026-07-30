@@ -2,9 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { 
-  Key, 
-  Phone, 
-  Bot, 
   Calendar, 
   Clock, 
   Save, 
@@ -27,13 +24,8 @@ import {
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
 
   // Settings State
-  const [telnyxApiKey, setTelnyxApiKey] = useState('');
-  const [telnyxApiKeyConfigured, setTelnyxApiKeyConfigured] = useState(false);
-  const [telnyxPhoneNumber, setTelnyxPhoneNumber] = useState('');
-  const [telnyxAssistantId, setTelnyxAssistantId] = useState('');
   const [googleConnected, setGoogleConnected] = useState(false);
   const [googleProvider, setGoogleProvider] = useState<string | null>(null);
   const [testingGoogle, setTestingGoogle] = useState(false);
@@ -62,9 +54,6 @@ export default function SettingsPage() {
         const data = await res.json();
         
         if (data) {
-          setTelnyxApiKeyConfigured(Boolean(data.telnyxApiKeyConfigured));
-          setTelnyxPhoneNumber(data.telnyxPhoneNumber || '');
-          setTelnyxAssistantId(data.telnyxAssistantId || '');
           setGoogleConnected(!!data.googleCalendarConnected);
           setGoogleProvider(data.googleCalendarProvider || null);
           setCallWindowStart(data.callWindowStart || '10:00');
@@ -89,9 +78,6 @@ export default function SettingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          telnyxApiKey: telnyxApiKey || undefined,
-          telnyxPhoneNumber,
-          telnyxAssistantId,
           callWindowStart,
           callWindowEnd,
           timezone,
@@ -134,89 +120,10 @@ export default function SettingsPage() {
       {/* Title */}
       <div>
         <h1 className="text-3xl font-extrabold text-foreground">Configuración</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Gestiona tus credenciales de telefonía, integración de Google Calendar y horarios de llamadas.</p>
+        <p className="text-muted-foreground mt-1 text-sm">Gestiona la integración de Google Calendar y los horarios de llamadas.</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Telnyx Credentials Card */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-[#3b82f6]/10 text-[#3b82f6]">
-                <Key size={20} />
-              </div>
-              <div>
-                <CardTitle>Credenciales de Telnyx</CardTitle>
-                <CardDescription>Conecta tu cuenta de telefonía para realizar llamadas y comprar números.</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="telnyxApiKey">Telnyx API Key</Label>
-                <button
-                  type="button"
-                  onClick={() => setShowApiKey(!showApiKey)}
-                  className="text-xs text-[#3b82f6] hover:underline cursor-pointer"
-                >
-                  {showApiKey ? 'Ocultar' : 'Mostrar'}
-                </button>
-              </div>
-              <Input
-                id="telnyxApiKey"
-                type={showApiKey ? 'text' : 'password'}
-                placeholder={telnyxApiKeyConfigured ? '•••••••••••• (clave configurada)' : 'KEYxxxxxxxxxxxxxxxxxxxxxxxx'}
-                value={telnyxApiKey}
-                onChange={(e) => setTelnyxApiKey(e.target.value)}
-              />
-              <p className="text-[11px] text-muted-foreground">
-                La API Key de Telnyx se guarda de forma segura y encriptada en la base de datos Supabase.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="telnyxPhoneNumber">Número de Teléfono Comprado</Label>
-                <div className="relative">
-                  <Input
-                    id="telnyxPhoneNumber"
-                    type="text"
-                    placeholder="+1 (800) 555-0199"
-                    value={telnyxPhoneNumber}
-                    onChange={(e) => setTelnyxPhoneNumber(e.target.value)}
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
-                    <Phone size={16} />
-                  </div>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Número principal comprado para lanzar campañas de llamadas salientes.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="telnyxAssistantId">ID de Asistente de IA (Defecto)</Label>
-                <div className="relative">
-                  <Input
-                    id="telnyxAssistantId"
-                    type="text"
-                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                    value={telnyxAssistantId}
-                    onChange={(e) => setTelnyxAssistantId(e.target.value)}
-                  />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
-                    <Bot size={16} />
-                  </div>
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  ID del agente de voz de Telnyx por defecto para las llamadas.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Call Window Card */}
         <Card>
           <CardHeader>

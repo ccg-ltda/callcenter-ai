@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import { testGoogleAppsScriptConnection } from '@/lib/server/calendarService';
+import { requireApiAuth } from '@/lib/server/routeSecurity';
 
-export async function POST() {
+export async function POST(request: Request) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
   try {
     await testGoogleAppsScriptConnection();
     return NextResponse.json({ success: true });

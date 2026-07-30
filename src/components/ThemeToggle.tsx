@@ -14,11 +14,14 @@ export default function ThemeToggle() {
   const [theme, setTheme] = useState<Theme>('dark');
 
   useEffect(() => {
-    const stored = localStorage.getItem('theme');
-    const nextTheme = stored === 'light' || stored === 'dark' ? stored : getSystemTheme();
-    setTheme(nextTheme);
-    document.documentElement.classList.toggle('dark', nextTheme === 'dark');
-    document.documentElement.style.colorScheme = nextTheme;
+    const timer = window.setTimeout(() => {
+      const stored = localStorage.getItem('theme');
+      const nextTheme = stored === 'light' || stored === 'dark' ? stored : getSystemTheme();
+      setTheme(nextTheme);
+      document.documentElement.classList.toggle('dark', nextTheme === 'dark');
+      document.documentElement.style.colorScheme = nextTheme;
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const toggleTheme = () => {
