@@ -207,14 +207,14 @@ export default function TranscriptsPage() {
                     <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full ${
                       turn.role === 'agent'
                         ? 'bg-[#3b82f6]/10 text-[#3b82f6]'
-                        : 'bg-blue-500/10 text-blue-700 dark:text-blue-300'
+                        : 'bg-blue-500/10 text-foreground'
                     }`}>
                       {turn.role === 'agent' ? <Bot size={15} /> : <User size={15} />}
                     </span>
                     <div className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm leading-6 ${
                       turn.role === 'agent'
                         ? 'rounded-tl-sm bg-background text-muted-foreground'
-                        : 'rounded-tr-sm bg-blue-500/10 text-blue-900 dark:text-blue-100'
+                        : 'rounded-tr-sm bg-blue-500/10 text-foreground'
                     }`}>
                       {turn.text}
                     </div>
