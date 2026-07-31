@@ -61,8 +61,10 @@ Orden recomendado:
 2. Ejecuta `drizzle/0002_security_hardening.sql` en Supabase. Esta migración activa RLS,
    revoca acceso de clientes, crea rate limiting e idempotencia, y elimina la copia
    heredada de la clave Telnyx guardada en `settings`.
-3. Despliega la aplicación.
-4. Vuelve a activar el enrutamiento entrante o actualiza la aplicación de voz en Telnyx
+3. Ejecuta `drizzle/0003_multi_number_inventory.sql` para habilitar el inventario de
+   líneas, el agente entrante por número y la selección de salida por campaña.
+4. Despliega la aplicación.
+5. Vuelve a activar el enrutamiento entrante o actualiza la aplicación de voz en Telnyx
    para que sus callbacks usen las nuevas URLs protegidas.
 
 Los webhooks y TeXML siguen siendo accesibles por Telnyx, pero ahora requieren la firma

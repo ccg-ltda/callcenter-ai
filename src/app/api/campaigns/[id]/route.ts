@@ -20,7 +20,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   try {
     const { id } = await params; const body = await request.json();
     if (useMockServices) return NextResponse.json({ success: true, campaign: { id, ...body } });
-    const allowed: Record<string, string> = { name: 'name', agentId: 'agent_id', status: 'status', totalContacts: 'total_contacts', callsMade: 'calls_made', meetingsBooked: 'meetings_booked', totalCostUsd: 'total_cost_usd', launchedAt: 'launched_at', finishedAt: 'finished_at' };
+    const allowed: Record<string, string> = { name: 'name', agentId: 'agent_id', outboundPhoneNumber: 'outbound_phone_number', status: 'status', totalContacts: 'total_contacts', callsMade: 'calls_made', meetingsBooked: 'meetings_booked', totalCostUsd: 'total_cost_usd', launchedAt: 'launched_at', finishedAt: 'finished_at' };
     const values = Object.fromEntries(Object.entries(body).filter(([key]) => allowed[key]).map(([key, value]) => [allowed[key], value]));
     const { data, error } = await getSupabaseAdmin()!.from('campaigns').update(values).eq('id', id).select().maybeSingle();
     if (error) throw error;

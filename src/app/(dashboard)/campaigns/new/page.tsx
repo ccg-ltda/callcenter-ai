@@ -12,19 +12,38 @@ interface AgentOption {
   voice: string;
 }
 
+interface PhoneOption {
+  phoneNumber: string;
+  status: string;
+  isDefaultOutbound: boolean;
+}
+
 export default function NewCampaignPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [agents, setAgents] = useState<AgentOption[]>([]);
   const [name, setName] = useState('');
   const [agentId, setAgentId] = useState('');
+  const [phoneNumbers, setPhoneNumbers] = useState<PhoneOption[]>([]);
+  const [outboundPhoneNumber, setOutboundPhoneNumber] = useState('');
+  const [migrationRequired, setMigrationRequired] = useState(false);
 
   useEffect(() => {
-    fetch('/api/agents')
-      .then(r => r.json())
-      .then(data => {
-        setAgents(data || []);
-        if (data?.length > 0) setAgentId(data[0].id);
+    Promise.all([
+      fetch('/api/agents').then((response) => response.json()),
+      fetch('/api/telnyx/numbers/owned').then((response) => response.json()),
+    ])
+      .then(([agentData, numberData]) => {
+        setAgents(agentData || []);
+        if (agentData?.length > 0) setAgentId(agentData[0].id);
+        const activeNumbers = Array.isArray(numberData?.numbers)
+          ? numberData.numbers.filter((number: PhoneOption) => number.status === 'active')
+          : [];
+        setPhoneNumbers(activeNumbers);
+        setMigrationRequired(Boolean(numberData?.migrationRequired));
+        setOutboundPhoneNumber(
+          numberData?.defaultOutboundNumber || activeNumbers[0]?.phoneNumber || '',
+        );
       })
       .catch(console.error);
   }, []);
@@ -38,7 +57,12 @@ export default function NewCampaignPage() {
       const res = await fetch('/api/campaigns', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, name: name.trim(), agentId: agentId || null }),
+        body: JSON.stringify({
+          id,
+          name: name.trim(),
+          agentId: agentId || null,
+          outboundPhoneNumber: outboundPhoneNumber || null,
+        }),
       });
       if (!res.ok) throw new Error('Error al crear campaña');
       const data = await res.json();
@@ -78,6 +102,33 @@ export default function NewCampaignPage() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="outboundNumber">Número para llamadas salientes</Label>
+              {phoneNumbers.length ? (
+                <Select
+                  id="outboundNumber"
+                  options={phoneNumbers.map((number) => ({
+                    value: number.phoneNumber,
+                    label: `${number.phoneNumber}${number.isDefaultOutbound ? ' (predeterminado)' : ''}`,
+                  }))}
+                  value={outboundPhoneNumber}
+                  onChange={(event) => setOutboundPhoneNumber(event.target.value)}
+                />
+              ) : (
+                <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300">
+                  Compra o sincroniza un número Telnyx antes de crear campañas.
+                </p>
+              )}
+              {migrationRequired && (
+                <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-300">
+                  Aplica la migración 0003_multi_number_inventory.sql antes de crear campañas con múltiples líneas.
+                </p>
+              )}
+              <p className="text-[11px] text-muted-foreground">
+                Esta campaña conservará esta línea aunque luego cambies el número predeterminado.
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="agentSelect">Agente de Voz</Label>
               {agents.length === 0 ? (
                 <div className="flex items-center gap-2 p-3 rounded-lg border border-amber-500/20 bg-amber-500/5 text-amber-400 text-xs">
@@ -99,7 +150,7 @@ export default function NewCampaignPage() {
             <Link href="/campaigns">
               <Button type="button" variant="ghost">Cancelar</Button>
             </Link>
-            <Button type="submit" disabled={saving || agents.length === 0} className="flex items-center gap-2">
+            <Button type="submit" disabled={saving || agents.length === 0 || phoneNumbers.length === 0 || migrationRequired} className="flex items-center gap-2">
               {saving ? <Loader2 className="animate-spin" size={16} /> : <Plus size={16} />}
               Crear Campaña
             </Button>

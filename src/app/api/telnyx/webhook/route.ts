@@ -102,20 +102,32 @@ async function ensureInboundCall(identifiers: string[], payload: any) {
   const fromNumber = payloadValue(payload, 'From', 'from', 'caller_number', 'originating_number');
   if (!toNumber) return;
 
-  const { data: settings } = await supabase
-    .from('settings')
-    .select('telnyx_phone_number, inbound_agent_id')
-    .eq('id', 'default')
+  const normalizedToNumber = normalizePhoneNumber(toNumber);
+  const inventoryResult = await supabase
+    .from('phone_numbers')
+    .select('phone_number, inbound_agent_id')
+    .eq('phone_number', normalizedToNumber)
     .maybeSingle();
-  if (
-    !settings?.inbound_agent_id ||
-    normalizePhoneNumber(toNumber) !== normalizePhoneNumber(settings.telnyx_phone_number || '')
-  ) return;
+  let inboundAgentId = inventoryResult.data?.inbound_agent_id || '';
+  if (inventoryResult.error && !['42P01', 'PGRST205'].includes(inventoryResult.error.code || '')) {
+    throw inventoryResult.error;
+  }
+  if (!inboundAgentId) {
+    const { data: settings } = await supabase
+      .from('settings')
+      .select('telnyx_phone_number, inbound_agent_id')
+      .eq('id', 'default')
+      .maybeSingle();
+    if (normalizePhoneNumber(settings?.telnyx_phone_number || '') === normalizedToNumber) {
+      inboundAgentId = settings?.inbound_agent_id || '';
+    }
+  }
+  if (!inboundAgentId) return;
 
   await supabase.from('calls').upsert({
     id: identifiers[0],
     telnyx_call_id: identifiers[0],
-    agent_id: settings.inbound_agent_id,
+    agent_id: inboundAgentId,
     direction: 'inbound',
     from_number: fromNumber || null,
     to_number: toNumber,

@@ -86,6 +86,13 @@ type TelnyxAvailableNumber = {
   };
 };
 
+export type TelnyxOwnedNumber = {
+  id: string;
+  phoneNumber: string;
+  status: string;
+  connectionId: string | null;
+};
+
 export const telnyxService = {
   isRealAssistantId,
   async listRecentConversations(limit = 20) {
@@ -153,6 +160,38 @@ export const telnyxService = {
     } catch {
       return fallback;
     }
+  },
+  async listOwnedNumbers(): Promise<TelnyxOwnedNumber[]> {
+    if (isMock) {
+      return [{
+        id: 'mock_number_1',
+        phoneNumber: '+18005550199',
+        status: 'active',
+        connectionId: null,
+      }];
+    }
+
+    const response = await fetch('https://api.telnyx.com/v2/phone_numbers?page[size]=250', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error(await telnyxService.readErrorDetails(response));
+    const body = await response.json() as {
+      data?: Array<{
+        id?: string;
+        phone_number?: string;
+        status?: string;
+        connection_id?: string | null;
+      }>;
+    };
+    return (body.data || [])
+      .filter((number) => typeof number.id === 'string' && typeof number.phone_number === 'string')
+      .map((number) => ({
+        id: number.id!,
+        phoneNumber: number.phone_number!,
+        status: number.status || 'active',
+        connectionId: number.connection_id || null,
+      }));
   },
   /**
    * Search for available phone numbers

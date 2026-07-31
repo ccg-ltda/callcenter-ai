@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { telnyxService } from '@/lib/telnyxService';
 import { requireApiAuth } from '@/lib/server/routeSecurity';
+import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 
 export async function GET(request: Request) {
   const authError = requireApiAuth(request);
@@ -27,7 +28,34 @@ export async function POST(request: Request) {
         error: 'Telnyx devolvió un número oculto que no se puede comprar. Agrega un método de pago y verifica tu cuenta en Telnyx para desbloquear números completos.',
       }, { status: 400 });
     }
-    return NextResponse.json(await telnyxService.buyNumber(phoneNumber));
+    const result = await telnyxService.buyNumber(phoneNumber);
+    if (!useMockServices) {
+      const supabase = getSupabaseAdmin()!;
+      const { data: settings, error: settingsError } = await supabase
+        .from('settings')
+        .select('telnyx_phone_number')
+        .eq('id', 'default')
+        .maybeSingle();
+      if (settingsError) throw settingsError;
+
+      const { error: inventoryError } = await supabase.from('phone_numbers').upsert({
+        phone_number: phoneNumber,
+        status: result.status || 'pending',
+        updated_at: new Date().toISOString(),
+      });
+      if (inventoryError && !['42P01', 'PGRST205'].includes(inventoryError.code || '')) {
+        throw inventoryError;
+      }
+      if (!settings?.telnyx_phone_number) {
+        const { error: defaultError } = await supabase.from('settings').upsert({
+          id: 'default',
+          telnyx_phone_number: phoneNumber,
+          updated_at: new Date().toISOString(),
+        });
+        if (defaultError) throw defaultError;
+      }
+    }
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Error al comprar número.' }, { status: 502 });
   }

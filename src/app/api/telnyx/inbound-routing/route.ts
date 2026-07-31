@@ -3,6 +3,7 @@ import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { telnyxService } from '@/lib/telnyxService';
 import { requireApiAuth } from '@/lib/server/routeSecurity';
 import { secureTelnyxCallbackUrl } from '@/lib/server/telnyxWebhook';
+import { normalizePhoneNumber } from '@/lib/phoneNumbers';
 
 export async function GET(request: Request) {
   const authError = requireApiAuth(request);
@@ -28,12 +29,16 @@ export async function PUT(request: Request) {
   const authError = requireApiAuth(request);
   if (authError) return authError;
   try {
-    const { agentId } = await request.json();
+    const { agentId, phoneNumber: requestedPhoneNumber } = await request.json();
     if (typeof agentId !== 'string' || !agentId) {
       return NextResponse.json({ error: 'Selecciona un agente para atender el número.' }, { status: 400 });
     }
     if (useMockServices) {
-      return NextResponse.json({ success: true, inboundAgentId: agentId });
+      return NextResponse.json({
+        success: true,
+        inboundAgentId: agentId,
+        phoneNumber: requestedPhoneNumber || '+18005550199',
+      });
     }
 
     const supabase = getSupabaseAdmin()!;
@@ -43,7 +48,8 @@ export async function PUT(request: Request) {
     ]);
     if (settingsError) throw settingsError;
     if (agentError) throw agentError;
-    if (!settings?.telnyx_phone_number) {
+    const phoneNumber = normalizePhoneNumber(requestedPhoneNumber || settings?.telnyx_phone_number || '');
+    if (!phoneNumber) {
       return NextResponse.json({ error: 'Primero compra o configura un número Telnyx.' }, { status: 400 });
     }
     if (!agent) {
@@ -61,7 +67,7 @@ export async function PUT(request: Request) {
       process.env.TELNYX_WEBHOOK_URL || new URL('/api/telnyx/webhook', request.url).toString(),
     );
     await telnyxService.assignNumberToAssistant(
-      settings.telnyx_phone_number,
+      phoneNumber,
       assistant.id,
       statusCallbackUrl,
     );
@@ -72,19 +78,33 @@ export async function PUT(request: Request) {
       .eq('id', agentId);
     if (agentUpdateError) throw agentUpdateError;
 
-    const { error: settingsUpdateError } = await supabase
-      .from('settings')
+    const { error: inventoryUpdateError } = await supabase
+      .from('phone_numbers')
       .upsert({
-        id: 'default',
+        phone_number: phoneNumber,
         inbound_agent_id: agentId,
+        status: 'active',
         updated_at: new Date().toISOString(),
       });
-    if (settingsUpdateError) throw settingsUpdateError;
+    if (inventoryUpdateError && !['42P01', 'PGRST205'].includes(inventoryUpdateError.code || '')) {
+      throw inventoryUpdateError;
+    }
+
+    if (phoneNumber === settings?.telnyx_phone_number) {
+      const { error: settingsUpdateError } = await supabase
+        .from('settings')
+        .upsert({
+          id: 'default',
+          inbound_agent_id: agentId,
+          updated_at: new Date().toISOString(),
+        });
+      if (settingsUpdateError) throw settingsUpdateError;
+    }
 
     return NextResponse.json({
       success: true,
       inboundAgentId: agentId,
-      phoneNumber: settings.telnyx_phone_number,
+      phoneNumber,
     });
   } catch (error) {
     return NextResponse.json({

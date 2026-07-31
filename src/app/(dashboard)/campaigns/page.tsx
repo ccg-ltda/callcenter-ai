@@ -18,6 +18,7 @@ interface Campaign {
   callsMade: number;
   meetingsBooked: number;
   totalCostUsd: number;
+  outboundPhoneNumber?: string;
   createdAt?: string;
   launchedAt?: string;
 }

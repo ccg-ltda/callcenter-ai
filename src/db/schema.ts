@@ -29,10 +29,21 @@ export const agents = pgTable('agents', {
 });
 
 // Campañas
+// Inventario de líneas Telnyx. Cada número puede tener su propio agente entrante.
+export const phoneNumbers = pgTable('phone_numbers', {
+  phoneNumber: text('phone_number').primaryKey(),
+  telnyxId: text('telnyx_id'),
+  status: text('status').default('active'),
+  inboundAgentId: text('inbound_agent_id').references(() => agents.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+});
+
 export const campaigns = pgTable('campaigns', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   agentId: text('agent_id').references(() => agents.id),
+  outboundPhoneNumber: text('outbound_phone_number'),
   status: text('status').default('draft'), // draft, active, paused, finished
   totalContacts: integer('total_contacts').default(0),
   callsMade: integer('calls_made').default(0),

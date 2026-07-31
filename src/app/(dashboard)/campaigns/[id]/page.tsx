@@ -35,6 +35,7 @@ export default function CampaignDetailPage() {
     callsMade: number;
     meetingsBooked: number;
     totalCostUsd: number;
+    outboundPhoneNumber?: string;
     createdAt: string;
     launchedAt?: string;
   }
@@ -185,6 +186,7 @@ export default function CampaignDetailPage() {
             <p className="text-muted-foreground text-xs mt-0.5">
               Creada {new Date(campaign.createdAt).toLocaleDateString('es-AR')}
               {campaign.launchedAt && ` · Lanzada ${new Date(campaign.launchedAt).toLocaleDateString('es-AR')}`}
+              {campaign.outboundPhoneNumber && ` · Salida ${campaign.outboundPhoneNumber}`}
             </p>
           </div>
         </div>

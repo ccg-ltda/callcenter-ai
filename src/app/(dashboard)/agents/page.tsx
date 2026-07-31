@@ -25,6 +25,12 @@ interface Agent {
   meetingDurationMin?: number;
 }
 
+interface OutboundNumber {
+  phoneNumber: string;
+  status: string;
+  isDefaultOutbound: boolean;
+}
+
 export default function AgentsPage() {
   const [agentsList, setAgentsList] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,6 +48,9 @@ export default function AgentsPage() {
   // Test Call State
   const [testPhoneNumber, setTestPhoneNumber] = useState('');
   const [selectedAgentForTest, setSelectedAgentForTest] = useState('');
+  const [outboundNumbers, setOutboundNumbers] = useState<OutboundNumber[]>([]);
+  const [selectedOutboundNumber, setSelectedOutboundNumber] = useState('');
+  const [numberInventoryReady, setNumberInventoryReady] = useState(true);
 
   const voiceOptions = [
     { value: 'telnyx_voice_es_female_1', label: 'Español - Femenina (Melina)' },
@@ -53,13 +62,27 @@ export default function AgentsPage() {
   // Fetch agents list
   const loadAgents = async () => {
     try {
-      const res = await fetch('/api/agents');
+      const [res, numbersResponse] = await Promise.all([
+        fetch('/api/agents'),
+        fetch('/api/telnyx/numbers/owned'),
+      ]);
       if (!res.ok) throw new Error('Error al cargar agentes');
-      const data = await res.json();
+      const [data, numberData] = await Promise.all([
+        res.json(),
+        numbersResponse.ok ? numbersResponse.json() : Promise.resolve({ numbers: [] }),
+      ]);
       setAgentsList(data || []);
       if (data.length > 0) {
         setSelectedAgentForTest(data[0].id);
       }
+      const activeNumbers = Array.isArray(numberData.numbers)
+        ? numberData.numbers.filter((number: OutboundNumber) => number.status === 'active')
+        : [];
+      setOutboundNumbers(activeNumbers);
+      setNumberInventoryReady(!numberData.migrationRequired);
+      setSelectedOutboundNumber(
+        numberData.defaultOutboundNumber || activeNumbers[0]?.phoneNumber || '',
+      );
     } catch (error) {
       console.error(error);
     } finally {
@@ -147,6 +170,7 @@ export default function AgentsPage() {
         body: JSON.stringify({
           phoneNumber: testPhoneNumber,
           agentId: selectedAgentForTest,
+          fromNumber: numberInventoryReady ? selectedOutboundNumber || undefined : undefined,
         }),
       });
 
@@ -240,7 +264,7 @@ export default function AgentsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleTestCall} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="testAgent">Seleccionar Agente</Label>
                     <Select
@@ -248,6 +272,20 @@ export default function AgentsPage() {
                       options={agentsList.map(a => ({ value: a.id, label: a.name }))}
                       value={selectedAgentForTest}
                       onChange={(e) => setSelectedAgentForTest(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="testFromNumber">Línea saliente</Label>
+                    <Select
+                      id="testFromNumber"
+                      options={outboundNumbers.map((number) => ({
+                        value: number.phoneNumber,
+                        label: `${number.phoneNumber}${number.isDefaultOutbound ? ' (predeterminada)' : ''}`,
+                      }))}
+                      value={selectedOutboundNumber}
+                      onChange={(event) => setSelectedOutboundNumber(event.target.value)}
+                      disabled={!outboundNumbers.length}
                     />
                   </div>
                   
@@ -274,7 +312,7 @@ export default function AgentsPage() {
                 <div className="flex justify-end">
                   <Button 
                     type="submit" 
-                    disabled={calling || agentsList.length === 0} 
+                    disabled={calling || agentsList.length === 0 || outboundNumbers.length === 0}
                     className="flex items-center gap-2"
                   >
                     {calling ? (

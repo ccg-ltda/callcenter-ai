@@ -1,5 +1,6 @@
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { readTelnyxBody, verifyTelnyxRequest } from '@/lib/server/telnyxWebhook';
+import { normalizePhoneNumber } from '@/lib/phoneNumbers';
 
 function xmlResponse(content: string, status = 200) {
   return new Response(`<?xml version="1.0" encoding="UTF-8"?><Response>${content}</Response>`, {
@@ -43,7 +44,7 @@ async function handleInboundCall(request: Request) {
     const params = requestParameters(request, rawBody);
     const callId = params.get('CallSid') || params.get('CallSidLegacy') || '';
     const fromNumber = params.get('From') || '';
-    const toNumber = params.get('To') || '';
+    const toNumber = normalizePhoneNumber(params.get('To') || '');
 
     if (useMockServices) {
       return xmlResponse('<Connect><AIAssistant id="mock_assistant_123"></AIAssistant></Connect>');
@@ -56,14 +57,26 @@ async function handleInboundCall(request: Request) {
       .eq('id', 'default')
       .maybeSingle();
     if (settingsError) throw settingsError;
-    if (!settings?.inbound_agent_id) {
+    const inventoryResult = toNumber
+      ? await supabase
+          .from('phone_numbers')
+          .select('inbound_agent_id')
+          .eq('phone_number', toNumber)
+          .maybeSingle()
+      : { data: null, error: null };
+    if (inventoryResult.error && !['42P01', 'PGRST205'].includes(inventoryResult.error.code || '')) {
+      throw inventoryResult.error;
+    }
+    const inboundAgentId = inventoryResult.data?.inbound_agent_id
+      || (toNumber === settings?.telnyx_phone_number ? settings?.inbound_agent_id : '');
+    if (!inboundAgentId) {
       return xmlResponse('<Say language="es-CO">Esta línea todavía no tiene un agente asignado.</Say><Hangup />');
     }
 
     const { data: agent, error: agentError } = await supabase
       .from('agents')
       .select('telnyx_assistant_id')
-      .eq('id', settings.inbound_agent_id)
+      .eq('id', inboundAgentId)
       .maybeSingle();
     if (agentError) throw agentError;
     if (!agent?.telnyx_assistant_id) {
@@ -74,10 +87,10 @@ async function handleInboundCall(request: Request) {
       const { error: callError } = await supabase.from('calls').upsert({
         id: callId,
         telnyx_call_id: callId,
-        agent_id: settings.inbound_agent_id,
+        agent_id: inboundAgentId,
         direction: 'inbound',
         from_number: fromNumber || null,
-        to_number: toNumber || settings.telnyx_phone_number || null,
+        to_number: toNumber || settings?.telnyx_phone_number || null,
         status: 'in_progress',
         started_at: new Date().toISOString(),
       }, { onConflict: 'id' });

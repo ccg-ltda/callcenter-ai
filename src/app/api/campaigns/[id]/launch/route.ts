@@ -25,7 +25,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     if (!campaign) return NextResponse.json({ error: 'Campaña no encontrada.' }, { status: 404 });
     const start = settings?.call_window_start || '10:00'; const end = settings?.call_window_end || '18:00'; const timezone = settings?.timezone || 'America/Bogota';
     if (!isWithinCallWindow(start, end, timezone)) return NextResponse.json({ error: `Fuera de la ventana permitida (${start}–${end}, ${timezone}).` }, { status: 403 });
-    if (!settings?.telnyx_phone_number) return NextResponse.json({ error: 'Configura primero el número Telnyx.' }, { status: 400 });
+    const outboundPhoneNumber = campaign.outbound_phone_number || settings?.telnyx_phone_number;
+    if (!outboundPhoneNumber) return NextResponse.json({ error: 'Configura primero el número Telnyx.' }, { status: 400 });
     const { data: agent } = campaign.agent_id
       ? await supabase.from('agents').select('name, voice, script, goal, telnyx_assistant_id').eq('id', campaign.agent_id).maybeSingle()
       : { data: null };
@@ -53,10 +54,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     const failedCalls: Array<{ contactId: string; name: string; error: string }> = [];
     for (const contact of contacts || []) {
       try {
-        const result = await telnyxService.startCall({ phone: contact.phone, fullName: contact.full_name }, assistantId, settings.telnyx_phone_number);
+        const result = await telnyxService.startCall({ phone: contact.phone, fullName: contact.full_name }, assistantId, outboundPhoneNumber);
         if (result.success) {
           const callId = result.callId || `call_${crypto.randomUUID()}`;
-          await supabase.from('calls').insert({ id: callId, contact_id: contact.id, campaign_id: id, telnyx_call_id: callId, status: 'queued' });
+          await supabase.from('calls').insert({
+            id: callId,
+            contact_id: contact.id,
+            campaign_id: id,
+            agent_id: campaign.agent_id,
+            telnyx_call_id: callId,
+            direction: 'outbound',
+            from_number: outboundPhoneNumber,
+            to_number: contact.phone,
+            status: 'queued',
+          });
           await supabase.from('contacts').update({ status: 'calling' }).eq('id', contact.id); callsQueued++;
         }
       } catch (error) {
