@@ -26,6 +26,7 @@ export default function NewCampaignPage() {
   const [agentId, setAgentId] = useState('');
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneOption[]>([]);
   const [outboundPhoneNumber, setOutboundPhoneNumber] = useState('');
+  const [maxConcurrentCalls, setMaxConcurrentCalls] = useState(1);
   const [migrationRequired, setMigrationRequired] = useState(false);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function NewCampaignPage() {
           name: name.trim(),
           agentId: agentId || null,
           outboundPhoneNumber: outboundPhoneNumber || null,
+          maxConcurrentCalls,
         }),
       });
       if (!res.ok) throw new Error('Error al crear campaña');
@@ -125,6 +127,23 @@ export default function NewCampaignPage() {
               )}
               <p className="text-[11px] text-muted-foreground">
                 Esta campaña conservará esta línea aunque luego cambies el número predeterminado.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="maxConcurrentCalls">Llamadas simultáneas</Label>
+              <Input
+                id="maxConcurrentCalls"
+                type="number"
+                min={1}
+                max={50}
+                step={1}
+                value={maxConcurrentCalls}
+                onChange={(event) => setMaxConcurrentCalls(Number(event.target.value))}
+                required
+              />
+              <p className="text-[11px] text-muted-foreground">
+                La campaña mantendrá hasta esta cantidad de llamadas activas y tomará el siguiente contacto cuando una termine.
               </p>
             </div>
 

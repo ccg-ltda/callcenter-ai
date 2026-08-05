@@ -19,6 +19,7 @@ interface Campaign {
   meetingsBooked: number;
   totalCostUsd: number;
   outboundPhoneNumber?: string;
+  maxConcurrentCalls: number;
   createdAt?: string;
   launchedAt?: string;
 }
@@ -185,6 +186,7 @@ export default function CampaignsPage() {
                       <p className="text-xs text-muted-foreground font-mono">
                         Creada {camp.createdAt ? new Date(camp.createdAt).toLocaleDateString('es-AR') : '—'}
                         {camp.launchedAt && ` · Lanzada ${new Date(camp.launchedAt).toLocaleDateString('es-AR')}`}
+                        {` · ${camp.maxConcurrentCalls || 1} simultánea${(camp.maxConcurrentCalls || 1) === 1 ? '' : 's'}`}
                       </p>
                     </div>
 

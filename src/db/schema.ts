@@ -44,6 +44,7 @@ export const campaigns = pgTable('campaigns', {
   name: text('name').notNull(),
   agentId: text('agent_id').references(() => agents.id),
   outboundPhoneNumber: text('outbound_phone_number'),
+  maxConcurrentCalls: integer('max_concurrent_calls').default(1).notNull(),
   status: text('status').default('draft'), // draft, active, paused, finished
   totalContacts: integer('total_contacts').default(0),
   callsMade: integer('calls_made').default(0),

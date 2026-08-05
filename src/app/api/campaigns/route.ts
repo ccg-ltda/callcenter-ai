@@ -18,6 +18,10 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     if (!body.id || !body.name) return NextResponse.json({ error: 'Faltan id o name.' }, { status: 400 });
+    const maxConcurrentCalls = Number(body.maxConcurrentCalls ?? 1);
+    if (!Number.isInteger(maxConcurrentCalls) || maxConcurrentCalls < 1 || maxConcurrentCalls > 50) {
+      return NextResponse.json({ error: 'Las llamadas simultáneas deben ser un número entero entre 1 y 50.' }, { status: 400 });
+    }
     if (useMockServices) return NextResponse.json({ success: true, campaign: body });
     const supabase = getSupabaseAdmin()!;
     if (body.outboundPhoneNumber) {
@@ -37,6 +41,7 @@ export async function POST(request: Request) {
       name: body.name,
       agent_id: body.agentId || null,
       outbound_phone_number: body.outboundPhoneNumber || null,
+      max_concurrent_calls: maxConcurrentCalls,
       status: body.status || 'draft',
     }).select().single();
     if (error) throw error;

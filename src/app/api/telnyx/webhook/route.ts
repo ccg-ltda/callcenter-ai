@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { after, NextResponse } from 'next/server';
 import { createCalendarEvent, isGoogleAppsScriptConfigured } from '@/lib/server/calendarService';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { syncCallTranscript } from '@/lib/server/transcriptSync';
 import { normalizePhoneNumber } from '@/lib/phoneNumbers';
 import { approvedAutomatedMeetingDate } from '@/lib/server/meetingSafety';
 import { readTelnyxBody, verifyTelnyxRequest } from '@/lib/server/telnyxWebhook';
+import { dispatchCampaignCalls } from '@/lib/server/campaignDispatcher';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -74,7 +75,7 @@ async function findCall(identifiers: string[]) {
   if (!supabase || !identifiers.length) return null;
   const { data } = await supabase
     .from('calls')
-    .select('id, contact_id, campaign_id, agent_id, direction, from_number, to_number, started_at, telnyx_call_id, contact:contacts(full_name, phone, company)')
+    .select('id, contact_id, campaign_id, agent_id, direction, from_number, to_number, status, started_at, telnyx_call_id, contact:contacts(full_name, phone, company)')
     .in('telnyx_call_id', identifiers)
     .limit(1)
     .maybeSingle();
@@ -145,18 +146,14 @@ async function updateContact(identifiers: string[], status: string) {
 async function updateMetrics(call: any, durationSeconds: number, costUsd: number) {
   const supabase = getSupabaseAdmin();
   if (!supabase || !call?.campaign_id) return;
-  const { data: campaign } = await supabase.from('campaigns').select('calls_made, total_cost_usd').eq('id', call.campaign_id).single();
-  await supabase.from('campaigns').update({ calls_made: (campaign?.calls_made || 0) + 1, total_cost_usd: (campaign?.total_cost_usd || 0) + costUsd }).eq('id', call.campaign_id);
-
-  const date = new Date().toISOString().slice(0, 10);
-  const { data: daily } = await supabase.from('daily_metrics').select('*').eq('date', date).maybeSingle();
-  await supabase.from('daily_metrics').upsert({
-    date, campaign_id: call.campaign_id, calls_made: (daily?.calls_made || 0) + 1,
-    calls_answered: (daily?.calls_answered || 0) + (durationSeconds > 0 ? 1 : 0),
-    meetings_booked: daily?.meetings_booked || 0,
-    minutes_talked: (daily?.minutes_talked || 0) + durationSeconds / 60,
-    cost_usd: (daily?.cost_usd || 0) + costUsd,
+  const { error: campaignMetricsError } = await supabase.rpc('increment_campaign_call_metrics', {
+    p_campaign_id: call.campaign_id,
+    p_cost_usd: costUsd,
+    p_duration_seconds: durationSeconds,
+    p_answered: call.status === 'in_progress',
+    p_date: new Date().toISOString().slice(0, 10),
   });
+  if (campaignMetricsError) throw campaignMetricsError;
 }
 
 async function handleConversationEnded(identifiers: string[], payload: any) {
@@ -241,8 +238,17 @@ export async function POST(request: Request) {
       const durationSeconds = safeDuration(payload.duration_secs || payload.CallDuration || (call?.started_at ? Math.max(0, Math.round((Date.now() - new Date(call.started_at).getTime()) / 1000)) : 0));
       const costUsd = Number(((durationSeconds / 60) * 0.006).toFixed(4));
       await updateCall(identifiers, { status: 'completed', ended_at: new Date().toISOString(), duration_seconds: durationSeconds, cost_usd: costUsd, outcome: payload.hangup_cause || (durationSeconds ? 'completed' : 'no_answer') });
-      if (!durationSeconds) await updateContact(identifiers, 'no_answer');
+      await updateContact(identifiers, call?.status === 'in_progress' ? 'answered' : 'no_answer');
       await updateMetrics(call, durationSeconds, costUsd);
+      if (call?.campaign_id) {
+        after(async () => {
+          try {
+            await dispatchCampaignCalls(call.campaign_id);
+          } catch (error) {
+            console.error(`[Campaign] Could not refill campaign ${call.campaign_id}`, error);
+          }
+        });
+      }
       if (call) {
         try {
           await syncCallTranscript(call.id, { telnyxCallId: call.telnyx_call_id || identifiers[0] });

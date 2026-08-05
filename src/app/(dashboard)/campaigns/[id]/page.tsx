@@ -36,6 +36,7 @@ export default function CampaignDetailPage() {
     meetingsBooked: number;
     totalCostUsd: number;
     outboundPhoneNumber?: string;
+    maxConcurrentCalls: number;
     createdAt: string;
     launchedAt?: string;
   }
@@ -187,6 +188,7 @@ export default function CampaignDetailPage() {
               Creada {new Date(campaign.createdAt).toLocaleDateString('es-AR')}
               {campaign.launchedAt && ` · Lanzada ${new Date(campaign.launchedAt).toLocaleDateString('es-AR')}`}
               {campaign.outboundPhoneNumber && ` · Salida ${campaign.outboundPhoneNumber}`}
+              {` · Hasta ${campaign.maxConcurrentCalls || 1} llamada${(campaign.maxConcurrentCalls || 1) === 1 ? '' : 's'} simultánea${(campaign.maxConcurrentCalls || 1) === 1 ? '' : 's'}`}
             </p>
           </div>
         </div>
