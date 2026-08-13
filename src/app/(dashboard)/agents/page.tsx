@@ -53,6 +53,7 @@ export default function AgentsPage() {
   const [numberInventoryReady, setNumberInventoryReady] = useState(true);
 
   const voiceOptions = [
+    { value: 'Minimax.speech-2.8-turbo.T-xadVp8JS-iP2I6T81D9YqgF49-AuUlOgI60Kc6xlg4V', label: 'Español - Voz Callcenter Original M4A (clonada)' },
     { value: 'Minimax.speech-2.8-turbo.T-xadVp8JS-iP2I6T81D9YiMAnBCKfEIZkL5daUfYdagV', label: 'Español - Voz Callcenter Minimax Extendida (clonada)' },
     { value: 'Telnyx.Qwen3TTS.551f4624-59ae-4ad9-b6f3-7fe87e096330', label: 'Español - Voz Callcenter Qwen Optimizada (clonada)' },
     { value: 'Telnyx.Qwen3TTS.489d87d9-65d3-42be-8291-7ab0a7981dae', label: 'Español - Voz Callcenter Personalizada (clonada)' },
