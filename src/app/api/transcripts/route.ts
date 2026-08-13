@@ -4,6 +4,7 @@ import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { reconcileRecentInboundCalls } from '@/lib/server/inboundCallSync';
 import { syncCallTranscript } from '@/lib/server/transcriptSync';
 import { requireApiAuth } from '@/lib/server/routeSecurity';
+import { telnyxService } from '@/lib/telnyxService';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -22,10 +23,30 @@ export async function GET(request: Request) {
 
   const pendingCalls = (data || []).filter((call: any) => {
     const transcript = Array.isArray(call.transcript) ? call.transcript[0] : call.transcript;
-    return call.status === 'completed' && (!transcript || !Array.isArray(transcript.full_transcript) || !transcript.full_transcript.length);
+    return call.telnyx_call_id
+      && (!transcript || !Array.isArray(transcript.full_transcript) || !transcript.full_transcript.length);
   }).slice(0, 10);
+  let recentConversations = [] as Awaited<ReturnType<typeof telnyxService.listRecentConversations>>;
+  try {
+    recentConversations = pendingCalls.length ? await telnyxService.listRecentConversations(100) : [];
+  } catch (conversationError) {
+    console.error('[Transcripts] Could not list recent Telnyx conversations:', conversationError);
+  }
+  const conversationByCallId = new Map(
+    recentConversations
+      .filter((conversation) => conversation.metadata?.call_control_id)
+      .map((conversation) => [conversation.metadata!.call_control_id!, conversation]),
+  );
   const reconciled = await Promise.allSettled(pendingCalls.map(async (call: any) => {
-    const result = await syncCallTranscript(call.id, { telnyxCallId: call.telnyx_call_id });
+    const conversation = conversationByCallId.get(call.telnyx_call_id);
+    // Telnyx can leave TeXML calls as ringing/queued in our database even
+    // after their AI conversation and messages are available. Reconcile from
+    // the conversation directly instead of waiting for a completed webhook.
+    if (!conversation && call.status !== 'completed') return;
+    const result = await syncCallTranscript(call.id, {
+      conversationId: conversation?.id,
+      telnyxCallId: call.telnyx_call_id,
+    });
     if (result) call.transcript = [{ ...result.transcript, created_at: new Date().toISOString() }];
   }));
   reconciled.forEach((result, index) => {
