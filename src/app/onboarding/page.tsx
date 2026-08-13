@@ -60,6 +60,8 @@ export default function OnboardingPage() {
   const [googleConnected, setGoogleConnected] = useState(false);
 
   const voiceOptions = [
+    { value: 'Minimax.speech-2.8-turbo.T-xadVp8JS-iP2I6T81D9YiMAnBCKfEIZkL5daUfYdagV', label: 'Español - Voz Callcenter Minimax Extendida (clonada)' },
+    { value: 'Telnyx.Qwen3TTS.551f4624-59ae-4ad9-b6f3-7fe87e096330', label: 'Español - Voz Callcenter Qwen Optimizada (clonada)' },
     { value: 'Telnyx.Qwen3TTS.489d87d9-65d3-42be-8291-7ab0a7981dae', label: 'Español - Voz Callcenter Personalizada (clonada)' },
     { value: 'telnyx_voice_en_female_1', label: 'Inglés - Femenina 1' },
     { value: 'telnyx_voice_en_male_1', label: 'Inglés - Masculina 1' },
