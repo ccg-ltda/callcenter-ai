@@ -53,6 +53,7 @@ export default function AgentsPage() {
   const [numberInventoryReady, setNumberInventoryReady] = useState(true);
 
   const voiceOptions = [
+    { value: 'Telnyx.Qwen3TTS.489d87d9-65d3-42be-8291-7ab0a7981dae', label: 'Español - Voz Callcenter Personalizada (clonada)' },
     { value: 'telnyx_voice_es_female_1', label: 'Español - Femenina (Melina)' },
     { value: 'telnyx_voice_es_male_1', label: 'Español - Masculino (Mateo)' },
     { value: 'telnyx_voice_en_female_1', label: 'Inglés - Femenina (Alice)' },
