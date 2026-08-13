@@ -26,9 +26,15 @@ export async function GET(request: Request) {
     return call.telnyx_call_id
       && (!transcript || !Array.isArray(transcript.full_transcript) || !transcript.full_transcript.length);
   }).slice(0, 10);
+  const callsNeedingDuration = (data || []).filter((call: any) =>
+    call.telnyx_call_id
+    && (Number(call.duration_seconds) <= 0 || !['completed', 'failed'].includes(call.status)),
+  );
   let recentConversations = [] as Awaited<ReturnType<typeof telnyxService.listRecentConversations>>;
   try {
-    recentConversations = pendingCalls.length ? await telnyxService.listRecentConversations(100) : [];
+    recentConversations = pendingCalls.length || callsNeedingDuration.length
+      ? await telnyxService.listRecentConversations(100)
+      : [];
   } catch (conversationError) {
     console.error('[Transcripts] Could not list recent Telnyx conversations:', conversationError);
   }
@@ -37,6 +43,25 @@ export async function GET(request: Request) {
       .filter((conversation) => conversation.metadata?.call_control_id)
       .map((conversation) => [conversation.metadata!.call_control_id!, conversation]),
   );
+  const durationUpdates = await Promise.allSettled(callsNeedingDuration.map(async (call: any) => {
+    const conversation = conversationByCallId.get(call.telnyx_call_id);
+    if (!conversation?.created_at || !conversation.last_message_at) return;
+    const durationSeconds = Math.max(1, Math.round(
+      (new Date(conversation.last_message_at).getTime() - new Date(conversation.created_at).getTime()) / 1_000,
+    ));
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= Number(call.duration_seconds || 0)) return;
+    const { error: durationError } = await supabase!
+      .from('calls')
+      .update({ duration_seconds: durationSeconds })
+      .eq('id', call.id);
+    if (durationError) throw durationError;
+    call.duration_seconds = durationSeconds;
+  }));
+  durationUpdates.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.error(`[Transcripts] Could not update duration for call ${callsNeedingDuration[index].id}:`, result.reason);
+    }
+  });
   const reconciled = await Promise.allSettled(pendingCalls.map(async (call: any) => {
     const conversation = conversationByCallId.get(call.telnyx_call_id);
     // Telnyx can leave TeXML calls as ringing/queued in our database even
