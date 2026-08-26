@@ -3,6 +3,7 @@ import { mockCalls } from '@/lib/mockData';
 import { getSupabaseAdmin, useMockServices } from '@/lib/server/supabaseAdmin';
 import { camelizeRow } from '@/lib/server/supabaseRows';
 import { reconcileRecentInboundCalls } from '@/lib/server/inboundCallSync';
+import { reconcileActiveOutboundCalls } from '@/lib/server/outboundCallSync';
 import { requireApiAuth } from '@/lib/server/routeSecurity';
 
 export async function GET(request: Request) {
@@ -11,7 +12,10 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const campaignId = params.get('campaignId'); const status = params.get('status');
   if (useMockServices) return NextResponse.json(mockCalls.filter((call) => (!campaignId || call.campaignId === campaignId) && (!status || call.status === status)));
-  await reconcileRecentInboundCalls();
+  await Promise.all([
+    reconcileRecentInboundCalls(),
+    reconcileActiveOutboundCalls(),
+  ]);
   let query = getSupabaseAdmin()!.from('calls').select('*, contact:contacts(id, full_name, phone, company), agent:agents(id, name)').order('created_at', { ascending: false });
   if (campaignId) query = query.eq('campaign_id', campaignId);
   if (status) query = query.eq('status', status);

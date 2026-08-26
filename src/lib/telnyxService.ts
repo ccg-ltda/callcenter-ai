@@ -122,8 +122,26 @@ export type TelnyxOwnedNumber = {
   connectionId: string | null;
 };
 
+export type TelnyxCallStatus = {
+  call_control_id?: string;
+  is_alive?: boolean;
+  call_duration?: number;
+  start_time?: string;
+  end_time?: string;
+};
+
 export const telnyxService = {
   isRealAssistantId,
+  async getCallStatus(callId: string): Promise<TelnyxCallStatus> {
+    if (!apiKey || !callId) return {};
+    const response = await fetch(`https://api.telnyx.com/v2/calls/${encodeURIComponent(callId)}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+      cache: 'no-store',
+    });
+    if (!response.ok) throw new Error(await telnyxService.readErrorDetails(response));
+    const body = await response.json();
+    return body.data || {};
+  },
   async listRecentConversations(limit = 20) {
     if (!apiKey) return [] as TelnyxConversation[];
 
@@ -416,12 +434,37 @@ export const telnyxService = {
   },
 
   async ensureTexmlApplication() {
-    if (connectionId) return connectionId;
-
     const voiceBaseUrl = process.env.TELNYX_TEXML_VOICE_URL || 'https://callcenter-ai-tau.vercel.app/api/telnyx/texml';
     const webhookBaseUrl = process.env.TELNYX_WEBHOOK_URL || new URL('/api/telnyx/webhook', voiceBaseUrl).toString();
     const voiceUrl = secureTelnyxCallbackUrl(voiceBaseUrl);
     const webhookUrl = secureTelnyxCallbackUrl(webhookBaseUrl);
+
+    if (connectionId) {
+      const configuredResponse = await fetch(
+        `https://api.telnyx.com/v2/texml_applications/${encodeURIComponent(connectionId)}`,
+        { headers: { 'Authorization': `Bearer ${apiKey}` }, cache: 'no-store' },
+      );
+      if (!configuredResponse.ok) throw new Error(await telnyxService.readErrorDetails(configuredResponse));
+      const configuredApplication = await configuredResponse.json();
+      if (configuredApplication.data?.status_callback !== webhookUrl) {
+        const updateResponse = await fetch(
+          `https://api.telnyx.com/v2/texml_applications/${encodeURIComponent(connectionId)}`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              status_callback: webhookUrl,
+              status_callback_method: 'post',
+            }),
+          },
+        );
+        if (!updateResponse.ok) throw new Error(await telnyxService.readErrorDetails(updateResponse));
+      }
+      return connectionId;
+    }
 
     const listParams = new URLSearchParams({
       'filter[friendly_name]': texmlApplicationName,
