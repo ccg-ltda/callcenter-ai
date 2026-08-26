@@ -336,7 +336,7 @@ export const telnyxService = {
           name: agentConfig.name,
           model: assistantModel,
           instructions: buildAssistantInstructions(agentConfig.script),
-          greeting: 'Hola, soy tu asistente virtual. ¿En qué puedo ayudarte?',
+          greeting: '<assistant-speaks-first-with-model-generated-message>',
           enabled_features: ['telephony'],
           tools: [
             {
