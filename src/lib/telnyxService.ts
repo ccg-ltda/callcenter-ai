@@ -24,6 +24,33 @@ function buildAssistantInstructions(script: string) {
   return `${script.trim()}\n\n${conversationControlInstructions}`;
 }
 
+function buildAssistantGreeting(script: string, agentName: string) {
+  const lines = script.split(/\r?\n/);
+  const markerIndex = lines.findIndex((line) => {
+    const normalizedLine = line
+      .trim()
+      .replace(/^#{1,6}\s*/, '')
+      .replace(/\*\*/g, '');
+
+    return /^(?:inicio de la llamada|apertura)\s*:?$/i.test(normalizedLine)
+      || /(?:comienza|inicia).*llamada.*(?:mensaje|frase)/i.test(normalizedLine);
+  });
+
+  if (markerIndex >= 0) {
+    const openingSection = lines.slice(markerIndex, markerIndex + 12).join('\n');
+    const quotedGreeting = openingSection.match(/[\u201c\u00ab"]([^\u201d\u00bb"]+)[\u201d\u00bb"]/)?.[1];
+    if (quotedGreeting?.trim()) {
+      return quotedGreeting
+        .replace(/\{\{\s*nombre\s*\}\}/gi, '{{full_name}}')
+        .replace(/\[\s*nombre\s*\]/gi, '{{full_name}}')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+  }
+
+  return `Hola {{full_name}}, soy ${agentName}. ¿Tienes un momento?`;
+}
+
 function isRealAssistantId(value: string | null | undefined) {
   return Boolean(value && !value.startsWith('telnyx_asst_') && !value.startsWith('mock_'));
 }
@@ -338,7 +365,7 @@ export const telnyxService = {
           name: agentConfig.name,
           model: assistantModel,
           instructions: buildAssistantInstructions(agentConfig.script),
-          greeting: '<assistant-speaks-first-with-model-generated-message>',
+          greeting: buildAssistantGreeting(agentConfig.script, agentConfig.name),
           enabled_features: ['telephony'],
           tools: [
             {
