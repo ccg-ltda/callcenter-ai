@@ -12,6 +12,8 @@ const assistantModel = process.env.TELNYX_ASSISTANT_MODEL || 'anthropic/claude-h
 const conversationControlInstructions = `
 
 REGLAS DE CONVERSACIÓN TELEFÓNICA:
+- Cuando se te solicite generar el primer mensaje de la llamada, responde de inmediato con una frase hablada completa. No esperes a que la persona diga "hola" ni devuelvas una respuesta vacía.
+- Para ese primer mensaje, sigue la apertura definida en el guion principal. No uses "¿En qué puedo ayudarte?" salvo que el guion lo pida expresamente.
 - Escucha hasta que la persona termine su idea y responde de forma breve y natural.
 - Si la persona interrumpe, deja de hablar y atiende lo que está diciendo.
 - Si la persona indica claramente que quiere terminar la llamada, por ejemplo: "chao", "hasta luego", "adiós", "gracias, eso es todo", "no deseo continuar", "no estoy interesado" o una despedida equivalente, responde con una despedida amable de una sola frase y usa inmediatamente la herramienta para finalizar la llamada.
