@@ -6,6 +6,9 @@ import { secureTelnyxCallbackUrl } from '@/lib/server/telnyxWebhook';
 const apiKey = process.env.TELNYX_API_KEY || '';
 const isMock = process.env.NEXT_PUBLIC_USE_MOCK_SERVICES === 'true' || !apiKey;
 const connectionId = process.env.TELNYX_CONNECTION_ID || '';
+const configuredTexmlApplicationId = process.env.TELNYX_TEXML_APPLICATION_ID
+  || connectionId
+  || '';
 const texmlApplicationName = 'Contact Center IA - Voice Agents';
 const assistantModel = process.env.TELNYX_ASSISTANT_MODEL || 'anthropic/claude-haiku-4-5';
 
@@ -439,31 +442,40 @@ export const telnyxService = {
     const voiceUrl = secureTelnyxCallbackUrl(voiceBaseUrl);
     const webhookUrl = secureTelnyxCallbackUrl(webhookBaseUrl);
 
-    if (connectionId) {
+    if (configuredTexmlApplicationId) {
       const configuredResponse = await fetch(
-        `https://api.telnyx.com/v2/texml_applications/${encodeURIComponent(connectionId)}`,
+        `https://api.telnyx.com/v2/texml_applications/${encodeURIComponent(configuredTexmlApplicationId)}`,
         { headers: { 'Authorization': `Bearer ${apiKey}` }, cache: 'no-store' },
       );
-      if (!configuredResponse.ok) throw new Error(await telnyxService.readErrorDetails(configuredResponse));
-      const configuredApplication = await configuredResponse.json();
-      if (configuredApplication.data?.status_callback !== webhookUrl) {
-        const updateResponse = await fetch(
-          `https://api.telnyx.com/v2/texml_applications/${encodeURIComponent(connectionId)}`,
-          {
-            method: 'PATCH',
-            headers: {
-              'Authorization': `Bearer ${apiKey}`,
-              'Content-Type': 'application/json',
+      if (configuredResponse.ok) {
+        const configuredApplication = await configuredResponse.json();
+        if (configuredApplication.data?.status_callback !== webhookUrl) {
+          const updateResponse = await fetch(
+            `https://api.telnyx.com/v2/texml_applications/${encodeURIComponent(configuredTexmlApplicationId)}`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                status_callback: webhookUrl,
+                status_callback_method: 'post',
+              }),
             },
-            body: JSON.stringify({
-              status_callback: webhookUrl,
-              status_callback_method: 'post',
-            }),
-          },
-        );
-        if (!updateResponse.ok) throw new Error(await telnyxService.readErrorDetails(updateResponse));
+          );
+          if (!updateResponse.ok) throw new Error(await telnyxService.readErrorDetails(updateResponse));
+        }
+        return configuredTexmlApplicationId;
       }
-      return connectionId;
+
+      if (configuredResponse.status !== 404) {
+        throw new Error(await telnyxService.readErrorDetails(configuredResponse));
+      }
+
+      console.warn(
+        '[Telnyx Service] The configured TeXML application was not found; discovering or creating a valid application.',
+      );
     }
 
     const listParams = new URLSearchParams({

@@ -47,11 +47,15 @@ Antes de ejecutar la migración o desplegar, configura en el entorno:
 TELNYX_API_KEY=...
 TELNYX_PUBLIC_KEY=...
 TELNYX_WEBHOOK_SECRET=un_valor_aleatorio_de_al_menos_32_caracteres
+TELNYX_TEXML_APPLICATION_ID=... # opcional; ID de una aplicacion TeXML
 TOKEN_ENCRYPTION_KEY=un_valor_aleatorio_de_al_menos_32_caracteres
 ```
 
 `TELNYX_PUBLIC_KEY` es la clave pública Ed25519 disponible en el portal de Telnyx.
 `TELNYX_WEBHOOK_SECRET` protege las URLs de callback generadas por la aplicación.
+`TELNYX_TEXML_APPLICATION_ID` es opcional. Si se configura, debe apuntar a una aplicación
+TeXML, no a una conexión de Call Control. Si se omite o el ID ya no existe, la aplicación
+busca o crea automáticamente la aplicación TeXML necesaria para las llamadas salientes.
 `TOKEN_ENCRYPTION_KEY` cifra tokens persistidos; si se omite se deriva una clave de
 `AUTH_SECRET`, por lo que no debe rotarse sin planificar la migración de los tokens.
 
